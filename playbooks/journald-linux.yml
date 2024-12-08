@@ -5,7 +5,7 @@
 
   tasks:
     - name: Get the last 10 lines of the system journal
-      command: journalctl -n 10
+      command: journalctl -n "{{ num_lines | default(25) }}"
       register: debug_output
 
     - name: Display the journal output

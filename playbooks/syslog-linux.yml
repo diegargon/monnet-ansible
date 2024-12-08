@@ -4,7 +4,7 @@
   become: yes
   tasks:
     - name: Get the last 10 lines of syslog
-      command: tail -n 10 /var/log/syslog
+      command: tail -n "{{ num_lines | default(25) }}" /var/log/syslog
       register: debug_output
 
     - name: Debug syslog output
