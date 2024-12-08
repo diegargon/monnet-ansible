@@ -3,13 +3,14 @@
   become: yes
   gather_facts: false
   tasks:
-    - name: Ensure only one host is being managed
-      fail:
-        msg: "This playbook must be run on exactly one host."
-      when: groups['all'] | length != 1
-
     - name: Shutdown the system
       command: shutdown -h now
-      register: shutdown_result
       async: 1
       poll: 0
+      register: shutdown_result
+      when: groups['all'] | length != 1
+
+    - name: Debug shutdown result
+      debug:
+        msg: "Shutdown command was executed successfully: {{ shutdown_result }}"
+      when: shutdown_result is defined
