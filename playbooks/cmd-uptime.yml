@@ -1,0 +1,11 @@
+- name: Gather uptime information
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Get uptime
+      command: uptime
+      register: uptime_info
+
+    - name: Show uptime
+      debug:
+        var: uptime_info.stdout

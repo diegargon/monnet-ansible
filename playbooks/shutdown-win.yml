@@ -1,0 +1,10 @@
+- name: Shutdown a Windows system
+  hosts: all
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Shutdown the Windows system
+      win_shutdown:
+        reboot: no
+        force: yes
+        msg: "System shutdown initiated by Ansible"

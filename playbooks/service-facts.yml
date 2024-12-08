@@ -1,0 +1,9 @@
+- name: Gather service facts
+  hosts: all
+  tasks:
+    - name: Gather facts about services
+      service_facts:
+
+    - name: Show all service facts
+      debug:
+        var: ansible_services

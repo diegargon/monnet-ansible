@@ -1,0 +1,9 @@
+- name: Reboot a Windows system
+  hosts: all
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Reboot the Windows system
+      win_reboot:
+        reboot_timeout: 600  # Tiempo de espera para el reinicio en segundos (ajustable)
+        test_command: systeminfo  # Comando para verificar si el sistema está disponible

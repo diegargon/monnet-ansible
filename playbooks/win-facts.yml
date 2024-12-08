@@ -1,0 +1,6 @@
+- name: Gather facts from Windows hosts
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather Windows facts
+      win_facts:

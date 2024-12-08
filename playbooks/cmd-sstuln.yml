@@ -1,0 +1,11 @@
+- name: Get network socket information
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run ss command
+      command: ss -tuln
+      register: socket_info
+
+    - name: Show socket info
+      debug:
+        var: socket_info.stdout

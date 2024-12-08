@@ -1,0 +1,9 @@
+- name: Gather iptables facts
+  hosts: all
+  tasks:
+    - name: Get iptables facts
+      iptables_facts:
+
+    - name: Show iptables facts
+      debug:
+        var: ansible_iptables

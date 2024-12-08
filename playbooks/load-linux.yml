@@ -1,0 +1,12 @@
+- name: Get load statistics
+  hosts: all
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Fetch load statistics using uptime
+      command: uptime
+      register: load_stats
+
+    - name: Display load statistics
+      debug:
+        msg: "{{ load_stats.stdout }}"

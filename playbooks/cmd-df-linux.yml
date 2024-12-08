@@ -1,0 +1,12 @@
+- name: Obtener información de particiones reales
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ejecutar df con tipo de sistema de archivos
+      command: df -T -h
+      register: df_output
+
+    - name: Mostrar particiones reales
+      debug:
+        msg: "{{ item }}"
+      with_items: "{{ df_output.stdout_lines | select('search', '^/dev/') | list }}"

@@ -1,0 +1,11 @@
+- name: Gather system load information
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Get top command output
+      command: top -b -n 1
+      register: top_info
+
+    - name: Show top command output
+      debug:
+        var: top_info.stdout

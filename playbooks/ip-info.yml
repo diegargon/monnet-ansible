@@ -1,0 +1,11 @@
+- name: Gather IP address and routes
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Get IP addresses
+      command: ip addr show
+      register: ip_info
+
+    - name: Show IP address information
+      debug:
+        var: ip_info.stdout

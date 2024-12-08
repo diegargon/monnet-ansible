@@ -1,0 +1,17 @@
+[Unit]
+Description=Monnet Ansible Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/monnet-ansible/src/monnet_ansible.py
+WorkingDirectory=/opt/monnet-ansible
+User=root
+Group=root
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=syslog
+SyslogIdentifier=monnet-ansible
+
+[Install]
+WantedBy=multi-user.target

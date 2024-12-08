@@ -1,0 +1,7 @@
+- name: Playbook que no hace nada
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Tarea vacía
+      debug:
+        msg: "Esto es solo un ejemplo, pero no hace nada útil."

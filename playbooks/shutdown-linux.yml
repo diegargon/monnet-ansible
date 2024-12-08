@@ -1,0 +1,26 @@
+- name: Shutdown a Linux system
+  hosts: all
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Shutdown the system
+      command: shutdown -h now 
+
+    - name: Wait for the system to go down (SSH port stopped)
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        state: stopped
+        timeout: 300  # Esperar hasta 5 minutos
+      register: shutdown_result
+      ignore_errors: yes  # Ignorar si el host no responde después de apagarse
+
+    - name: Show shutdown result
+      debug:
+        msg: "Shutdown successful, system is offline."
+      when: shutdown_result.state == "stopped"
+
+    - name: Timeout reached or failed to shutdown
+      debug:
+        msg: "Timeout reached or unable to shutdown system."
+      when: shutdown_result.state != "stopped"
