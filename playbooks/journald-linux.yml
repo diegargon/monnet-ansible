@@ -1,8 +1,13 @@
-- name: Get the last 10 lines of the system journal
-  command: journalctl -n 10
-  register: journal_output
-  changed_when: false
+- name: Get the last lines from the system journal
+  hosts: all
+  gather_facts: false
+  become: yes
 
-- name: Debug journal output
-  debug:
-    msg: "{{ journal_output.stdout_lines }}"
+  tasks:
+    - name: Get the last 10 lines of the system journal
+      command: journalctl -n 10
+      register: journal_output
+
+    - name: Display the journal output
+      debug:
+        var: journal_output.stdout_lines    

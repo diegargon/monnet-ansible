@@ -35,7 +35,7 @@ import os
 from time import sleep
 
 VERSION = 0
-MIN_VERSION = 28
+MIN_VERSION = 29
 HOST = 'localhost' 
 PORT = 65432 
 
