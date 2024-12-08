@@ -8,7 +8,7 @@
       async: 1
       poll: 0
       register: shutdown_result
-      when: groups['all'] | length != 1
+      when: groups['all'] | length == 1
 
     - name: Debug shutdown result
       debug:
