@@ -6,8 +6,8 @@
   tasks:
     - name: Get the last 10 lines of the system journal
       command: journalctl -n 10
-      register: journal_output
+      register: debug_output
 
     - name: Display the journal output
       debug:
-        var: journal_output.stdout_lines    
+        var: debug_output.stdout_lines    
