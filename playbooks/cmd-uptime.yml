@@ -8,4 +8,4 @@
 
     - name: Show uptime
       debug:
-        var: uptime_info.stdout
+        msg: uptime_info.stdout

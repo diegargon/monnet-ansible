@@ -8,4 +8,4 @@
 
     - name: Show socket info
       debug:
-        var: socket_info.stdout
+        msg: socket_info.stdout
