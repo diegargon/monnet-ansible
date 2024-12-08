@@ -1,6 +1,4 @@
 - name: Display gathered facts
   hosts: all
-  tasks:
-    - name: Show all facts
-      debug:
-        var: ansible_facts
+  gather_facts: true
+  
