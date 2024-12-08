@@ -10,4 +10,4 @@
 
     - name: Display the journal output
       debug:
-        msg: debug_output.stdout_lines    
+        msg: "{{ debug_output.stdout_lines }}"

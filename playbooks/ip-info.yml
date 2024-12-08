@@ -8,4 +8,4 @@
 
     - name: Show IP address information
       debug:
-        var: ip_info.stdout
+        msg: "{{ ip_info.stdout }}"

@@ -8,4 +8,4 @@
 
     - name: Show top command output
       debug:
-        msg: top_info.stdout
+        msg: "{{ top_info.stdout }}"

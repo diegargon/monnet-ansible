@@ -6,4 +6,4 @@
 
     - name: Show all service facts
       debug:
-        msg: ansible_services
+        msg: "{{ ansible_services }}"

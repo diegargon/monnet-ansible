@@ -8,4 +8,4 @@
 
     - name: Show socket info
       debug:
-        msg: socket_info.stdout
+        msg: "{{ socket_info.stdout }}"

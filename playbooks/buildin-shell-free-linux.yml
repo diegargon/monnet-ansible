@@ -9,4 +9,4 @@
 
     - name: Show memory usage
       debug:
-        msg: memory_info.stdout
+        msg: "{{ memory_info.stdout }}"

@@ -6,4 +6,4 @@
 
     - name: Show iptables facts
       debug:
-        var: ansible_iptables
+        msg: "{{ ansible_iptables }}"

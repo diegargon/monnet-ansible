@@ -9,4 +9,4 @@
 
     - name: Show disk usage
       debug:
-        msg: disk_usage.stdout
+        msg: "{{ disk_usage.stdout }}"
