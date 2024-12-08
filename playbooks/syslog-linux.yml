@@ -1,0 +1,12 @@
+- name: Get the last lines of syslog
+  hosts: all
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: Get the last 10 lines of syslog
+      command: tail -n 10 /var/log/syslog
+      register: syslog_output
+
+    - name: Debug syslog output
+      debug:
+        msg: "{{ syslog_output.stdout_lines }}"

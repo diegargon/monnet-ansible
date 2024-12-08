@@ -1,0 +1,8 @@
+- name: Get the last 10 lines of the system journal
+  command: journalctl -n 10
+  register: journal_output
+  changed_when: false
+
+- name: Debug journal output
+  debug:
+    msg: "{{ journal_output.stdout_lines }}"
