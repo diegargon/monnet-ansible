@@ -4,23 +4,16 @@
   gather_facts: false
   tasks:
     - name: Shutdown the system
-      command: shutdown -h now 
-
-    - name: Wait for the system to go down (SSH port stopped)
-      wait_for:
-        host: "{{ inventory_hostname }}"
-        port: 22
-        state: stopped
-        timeout: 300  # Esperar hasta 5 minutos
+      command: shutdown -h now
       register: shutdown_result
-      ignore_errors: yes  # Ignorar si el host no responde después de apagarse
+      ignore_errors: yes
 
-    - name: Show shutdown result
+    - name: Check if the shutdown command was executed
       debug:
-        msg: "Shutdown successful, system is offline."
-      when: shutdown_result.state == "stopped"
+        msg: "Shutdown command was executed successfully."
+      when: shutdown_result.rc == 0
 
-    - name: Timeout reached or failed to shutdown
+    - name: Report error if the shutdown command failed
       debug:
-        msg: "Timeout reached or unable to shutdown system."
-      when: shutdown_result.state != "stopped"
+        msg: "Shutdown command failed or the system is still running."
+      when: shutdown_result.rc != 0
