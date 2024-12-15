@@ -4,10 +4,10 @@
   gather_facts: false
 
   vars:
-    mysql_service: "mysql"  # Cambia según la distribución (mariadb, mysqld, etc.)
-    db_name: "{{ database_name }}"  # Variable externa para el nombre de la base de datos
-    mysql_user: "{{ mysql_username }}"  # Usuario con permisos para acceder a la base de datos
-    mysql_password: "{{ mysql_password }}"  # Contraseña para el usuario de MySQL
+    db_service: "{{ database_service }}"
+    db_name: "{{ database_name }}"  
+    mysql_user: "{{ db_username }}" 
+    mysql_password: "{{ db_password }}"  
 
   tasks:
     - name: Check if MySQL service is running
@@ -15,19 +15,19 @@
 
     - name: Start MySQL service if stopped
       ansible.builtin.service:
-        name: "{{ mysql_service }}"
+        name: "{{ db_service }}"
         state: started
-      when: ansible_facts.services[mysql_service].state != "running"
+      when: ansible_facts.services[db_service].state != "running"
 
     - name: Check for locking issues in the database
       ansible.builtin.shell: |
-        mysql -u {{ mysql_user }} -p{{ mysql_password }} -e "SHOW ENGINE INNODB STATUS \G" | grep -i "waiting for" || true
+        mysql -u {{ mysql_user }} -p{{ db_password }} -e "SHOW ENGINE INNODB STATUS \G" | grep -i "waiting for" || true
       register: locking_status
       changed_when: false
 
     - name: Attempt to repair database if locking issues detected
       ansible.builtin.shell: |
-        mysqlcheck -u {{ mysql_user }} -p{{ mysql_password }} --repair {{ db_name }}
+        mysqlcheck -u {{ mysql_user }} -p{{ db_password }} --repair {{ db_name }}
       when: locking_status.stdout != ""
       register: repair_result
 

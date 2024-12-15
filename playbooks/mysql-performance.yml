@@ -1,7 +1,13 @@
----
 - name: Monitor MySQL performance and resource usage
   hosts: mysql_servers
   gather_facts: false
+
+  vars:
+    #db_service: "{{ database_service }}"
+    #db_name: "{{ database_name }}"  
+    mysql_user: "{{ db_username }}"
+    mysql_password: "{{ db_password }}"  
+
   tasks:
     - name: Ensure MySQL is running
       service:
@@ -21,7 +27,7 @@
     # Check number of running queries
     - name: Get running queries
       mysql_query:
-        login_user: root
+        login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
         query: "SHOW PROCESSLIST;"
       register: running_queries
@@ -44,7 +50,7 @@
     # Check MySQL status related to cache and buffer
     - name: Get MySQL InnoDB buffer pool status
       mysql_query:
-        login_user: root
+        login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
         query: "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool%';"
       register: innodb_status
@@ -57,7 +63,7 @@
     # Get MySQL query cache status
     - name: Get MySQL query cache status
       mysql_query:
-        login_user: root
+        login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
         query: "SHOW GLOBAL STATUS LIKE 'Qcache%';"
       register: query_cache_status
@@ -70,7 +76,7 @@
     # Check MySQL connection stats
     - name: Get MySQL connections statistics
       mysql_query:
-        login_user: root
+        login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
         query: "SHOW STATUS LIKE 'Threads_connected';"
       register: connection_status
