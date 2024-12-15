@@ -1,0 +1,81 @@
+---
+- name: Monitor MySQL performance and resource usage
+  hosts: mysql_servers
+  gather_facts: false
+  tasks:
+    - name: Ensure MySQL is running
+      service:
+        name: mysql
+        state: started
+
+    # Check MySQL CPU usage (by MySQL process)
+    - name: Get MySQL CPU usage
+      shell: ps -eo %cpu,comm | grep mysqld
+      register: mysql_cpu_usage
+      changed_when: false
+
+    - name: Display MySQL CPU usage
+      debug:
+        msg: "MySQL CPU Usage: {{ mysql_cpu_usage.stdout }}"
+
+    # Check number of running queries
+    - name: Get running queries
+      mysql_query:
+        login_user: root
+        login_password: "{{ mysql_password }}"
+        query: "SHOW PROCESSLIST;"
+      register: running_queries
+      changed_when: false
+
+    - name: Display number of running queries
+      debug:
+        msg: "Running queries: {{ running_queries.stdout_lines | length }}"
+
+    # Check slow queries (based on slow query log if enabled)
+    - name: Get slow queries from the log
+      shell: tail -n 10 /var/log/mysql/mysql-slow.log
+      register: slow_queries
+      changed_when: false
+
+    - name: Display slow queries
+      debug:
+        msg: "Slow Queries: {{ slow_queries.stdout }}"
+
+    # Check MySQL status related to cache and buffer
+    - name: Get MySQL InnoDB buffer pool status
+      mysql_query:
+        login_user: root
+        login_password: "{{ mysql_password }}"
+        query: "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool%';"
+      register: innodb_status
+      changed_when: false
+
+    - name: Display InnoDB buffer pool status
+      debug:
+        msg: "{{ innodb_status.stdout_lines }}"
+
+    # Get MySQL query cache status
+    - name: Get MySQL query cache status
+      mysql_query:
+        login_user: root
+        login_password: "{{ mysql_password }}"
+        query: "SHOW GLOBAL STATUS LIKE 'Qcache%';"
+      register: query_cache_status
+      changed_when: false
+
+    - name: Display query cache status
+      debug:
+        msg: "{{ query_cache_status.stdout_lines }}"
+
+    # Check MySQL connection stats
+    - name: Get MySQL connections statistics
+      mysql_query:
+        login_user: root
+        login_password: "{{ mysql_password }}"
+        query: "SHOW STATUS LIKE 'Threads_connected';"
+      register: connection_status
+      changed_when: false
+
+    - name: Display MySQL connection statistics
+      debug:
+        msg: "Threads connected: {{ connection_status.stdout }}"
