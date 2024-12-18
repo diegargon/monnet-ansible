@@ -30,7 +30,7 @@
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW PROCESSLIST;"
       register: running_queries
@@ -55,7 +55,7 @@
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool%';"
       register: innodb_status
@@ -70,7 +70,7 @@
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW GLOBAL STATUS LIKE 'Qcache%';"
       register: query_cache_status
@@ -85,7 +85,7 @@
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW STATUS LIKE 'Threads_connected';"
       register: connection_status
