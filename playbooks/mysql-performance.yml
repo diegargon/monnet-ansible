@@ -39,17 +39,29 @@
 
     - name: Display number of running queries
       debug:
-        msg: "Running queries: {{ running_queries.stdout_lines | length }}"
+        msg: "Running queries: {{ running_queries.query_result | length }}"
 
     # Check slow queries (based on slow query log if enabled)
+    - name: Check if the slow query log file exists
+      stat:
+        path: /var/log/mysql/mysql-slow.log
+      register: slow_log_file
+
     - name: Get slow queries from the log
       shell: tail -n 10 /var/log/mysql/mysql-slow.log
       register: slow_queries
       changed_when: false
+      when: slow_log_file.stat.exists
 
     - name: Display slow queries
       debug:
         msg: "Slow Queries: {{ slow_queries.stdout }}"
+      when: slow_log_file.stat.exists
+
+    - name: Handle missing slow query log
+      debug:
+        msg: "The slow query log file does not exist."
+      when: not slow_log_file.stat.exists
 
     # Check MySQL status related to cache and buffer
     - name: Get MySQL InnoDB buffer pool status
@@ -64,7 +76,7 @@
 
     - name: Display InnoDB buffer pool status
       debug:
-        msg: "{{ innodb_status.stdout_lines }}"
+        msg: "{{ innodb_status.query_result }}"
 
     # Get MySQL query cache status
     - name: Get MySQL query cache status
@@ -79,7 +91,7 @@
 
     - name: Display query cache status
       debug:
-        msg: "{{ query_cache_status.stdout_lines }}"
+        msg: "{{ query_cache_status.query_result }}"
 
     # Check MySQL connection stats
     - name: Get MySQL connections statistics
@@ -94,4 +106,4 @@
 
     - name: Display MySQL connection statistics
       debug:
-        msg: "Threads connected: {{ connection_status.stdout }}"
+        msg: "Threads connected: {{ connection_status.query_result[0][1] }}"
