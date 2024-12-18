@@ -12,24 +12,21 @@ test:
   script:
     - pytest -v tests/test_monnet_ansible.py
 
-deploy_to_github:
+deploy:
   stage: deploy
-  image: alpine/git
+  image: python:3.9
   script:
-    - echo "nameserver 192.168.2.126" > /etc/resolv.conf
-    - git config --global user.name "GitLabCI"
-    - git config --global user.email "ci-bot@no.domain"
-#    - git init    
-    - git remote remove github || true
-    - git remote add github https://oauth2:${GITHUB_TOKEN}@github.com/diegargon/monnet-ansible.git
-#    - git remote add origin https://oauth2:${GITHUB_TOKEN}@github.com/diegargon/monnet-ansible.git
-#    - git remote set-url origin https://oauth2:${GITHUB_TOKEN}@github.com/diegargon/monnet-ansible.git
-    - git remote -v
-#    - git fetch origin main
-    - git fetch github main
-    - git checkout -b main || git checkout main    
-#    - git pull --rebase github main
-    - git pull --rebase --strategy=recursive --strategy-option=theirs github main || true
-    - git add .
-    - git commit -m "Deploy changes from GitLab CI" || echo "Nothing to commit"
-    - git push -u github main
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa  
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 192.168.2.148 >> ~/.ssh/known_hosts
+    - scp -r . root@192.168.2.148:/opt/monnet-ansible
+    - |
+      ssh root@192.168.2.148 <<EOF      
+      cp /opt/monnet-ansible/files/monnet-ansible.service /etc/systemd/system/monnet-ansible.service
+      systemctl daemon-reload
+      systemctl restart monnet-ansible.service
+      systemctl status monnet-ansible.service
+      EOF
+  only:
+    - main 

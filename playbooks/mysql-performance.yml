@@ -1,7 +1,6 @@
 # Need pip3 install PyMySQL
 - name: Monitor MySQL performance and resource usage
   hosts: all
-  become: true
   gather_facts: false
 
   vars:
@@ -31,7 +30,7 @@
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW PROCESSLIST;"
       register: running_queries
@@ -39,36 +38,24 @@
 
     - name: Display number of running queries
       debug:
-        msg: "Running queries: {{ running_queries.query_result | length }}"
+        msg: "Running queries: {{ running_queries.stdout_lines | length }}"
 
     # Check slow queries (based on slow query log if enabled)
-    - name: Check if the slow query log file exists
-      stat:
-        path: /var/log/mysql/mysql-slow.log
-      register: slow_log_file
-
     - name: Get slow queries from the log
       shell: tail -n 10 /var/log/mysql/mysql-slow.log
       register: slow_queries
       changed_when: false
-      when: slow_log_file.stat.exists
 
     - name: Display slow queries
       debug:
         msg: "Slow Queries: {{ slow_queries.stdout }}"
-      when: slow_log_file.stat.exists
-
-    - name: Handle missing slow query log
-      debug:
-        msg: "The slow query log file does not exist."
-      when: not slow_log_file.stat.exists
 
     # Check MySQL status related to cache and buffer
     - name: Get MySQL InnoDB buffer pool status
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool%';"
       register: innodb_status
@@ -76,14 +63,14 @@
 
     - name: Display InnoDB buffer pool status
       debug:
-        msg: "{{ innodb_status.query_result }}"
+        msg: "{{ innodb_status.stdout_lines }}"
 
     # Get MySQL query cache status
     - name: Get MySQL query cache status
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW GLOBAL STATUS LIKE 'Qcache%';"
       register: query_cache_status
@@ -91,14 +78,14 @@
 
     - name: Display query cache status
       debug:
-        msg: "{{ query_cache_status.query_result }}"
+        msg: "{{ query_cache_status.stdout_lines }}"
 
     # Check MySQL connection stats
     - name: Get MySQL connections statistics
       mysql_query:
         login_user: "{{ mysql_username }}"
         login_password: "{{ mysql_password }}"
-        login_host: localhost
+        host_all: yes
         login_unix_socket: /run/mysqld/mysqld.sock
         query: "SHOW STATUS LIKE 'Threads_connected';"
       register: connection_status
@@ -106,4 +93,4 @@
 
     - name: Display MySQL connection statistics
       debug:
-        msg: "Threads connected: {{ connection_status.query_result[0][1] if connection_status.query_result | length > 0 else 'No data found' }}"
+        msg: "Threads connected: {{ connection_status.stdout }}"
