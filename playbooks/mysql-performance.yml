@@ -1,11 +1,11 @@
 - name: Monitor MySQL performance and resource usage
-  hosts: mysql_servers
+  hosts: all
   gather_facts: false
 
   vars:
     #db_service: "{{ database_service }}"
     #db_name: "{{ database_name }}"  
-    mysql_user: "{{ db_username }}"
+    mysql_username: "{{ db_username }}"
     mysql_password: "{{ db_password }}"  
 
   tasks:

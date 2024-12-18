@@ -1,0 +1,18 @@
+- name: Check and restart MySQL service if not running
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check if MySQL service is running
+      ansible.builtin.systemd:
+        name: mysql
+        state: started
+      register: mysql_status
+      ignore_errors: true
+
+    - name: Restart MySQL if it is not running
+      ansible.builtin.systemd:
+        name: mysql
+        state: restarted
+      when: mysql_status.failed
