@@ -106,4 +106,4 @@
 
     - name: Display MySQL connection statistics
       debug:
-        msg: "Threads connected: {{ connection_status.query_result[0][1] }}"
+        msg: "Threads connected: {{ connection_status.query_result[0][1] if connection_status.query_result | length > 0 else 'No data found' }}"
