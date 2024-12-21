@@ -1,5 +1,4 @@
-# TODO: review deploy script works but is not right
-
+#
 stages:
   - test
   - deploy
@@ -32,5 +31,5 @@ deploy_to_github:
     - git diff .gitlab-ci.yml
     - git status
     - git commit -m "Deploy changes from GitLab CI"  || echo "Nothing to commit"
-#    - git push -u github main
-    - git push --force github main
+    - git log
+    - git push -u github main
