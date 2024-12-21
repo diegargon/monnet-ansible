@@ -25,7 +25,7 @@ deploy_to_github:
     - git remote -v
     - git fetch github main
     - git checkout -b main || git checkout main    
-    - git pull --rebase --strategy=recursive --strategy-option=theirs github main
+    - git pull --rebase --strategy=recursive --strategy-option=ours github main || true
     - git add .
     - git diff .gitlab-ci.yml
     - git status
