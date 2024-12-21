@@ -7,7 +7,7 @@ test:
   image: python:3.9
   before_script:
     - echo "nameserver 192.168.2.126" > /etc/resolv.conf
-    - sleep 5 # Trying avoid dns resolution problems
+    - sleep 10 # Trying avoid dns resolution problems
     - export PYTHONPATH=$PYTHONPATH:/builds/diegargon/monnet-ansible/src
     - pip install -r requirements.txt
     
@@ -19,7 +19,7 @@ deploy_to_github:
   image: alpine/git
   script:
     - echo "nameserver 192.168.2.126" > /etc/resolv.conf
-    - sleep 5 # Trying avoid dns resolution problems
+    - sleep 10 # Trying avoid dns resolution problems
     - git config --global user.name "GitLabCI"
     - git config --global user.email "ci-bot@no.domain"
     
@@ -28,7 +28,7 @@ deploy_to_github:
     - git remote -v
     - git fetch github main
     - git checkout -b main || git checkout main    
-    - git pull --rebase --strategy=recursive --strategy-option=theirs github main || true
+    - git pull --rebase --strategy=recursive --strategy-option=theirs github main
     - git add .
-    - git commit -m "Deploy changes from GitLab CI" || echo "Nothing to commit"
+    - git commit -m "Deploy changes from GitLab CI"
     - git push -u github main
