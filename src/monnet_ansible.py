@@ -1,5 +1,5 @@
 """
-Monnet Ansible intermediary
+Monnet Ansible Gateway
 
 This code is just a basic/preliminary draft.
 
@@ -35,7 +35,7 @@ import os
 from time import sleep
 
 VERSION = 0
-MIN_VERSION = 32
+MIN_VERSION = 33
 HOST = 'localhost' 
 PORT = 65432 
 
