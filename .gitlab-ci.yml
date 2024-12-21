@@ -1,3 +1,5 @@
+# TODO: review deploy script works but is not right
+
 stages:
   - test
   - deploy
