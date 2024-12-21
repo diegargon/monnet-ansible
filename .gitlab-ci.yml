@@ -36,5 +36,6 @@ deploy_to_github:
     - git checkout -b main || git checkout main    
     - git pull --rebase --strategy=recursive --strategy-option=theirs github main
     - git add .
+    - git status
     - git commit -m "Deploy changes from GitLab CI"
     - git push -u github main
