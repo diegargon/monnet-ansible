@@ -30,5 +30,5 @@ deploy_to_github:
     - git diff .gitlab-ci.yml
     - git status
     - git commit -m "Deploy changes from GitLab CI"  || echo "Nothing to commit"
-    - git log
-    - git push -u github main
+#    - git push -u github main
+    - git push --force github main
