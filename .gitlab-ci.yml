@@ -28,7 +28,8 @@ deploy_to_github:
 #    - git fetch origin main
     - git fetch github main
     - git checkout -b main || git checkout main    
-    - git pull --rebase github main
+#    - git pull --rebase github main
+    - git pull --rebase --strategy=recursive --strategy-option=theirs github main || true
     - git add .
     - git commit -m "Deploy changes from GitLab CI" || echo "Nothing to commit"
     - git push -u github main
