@@ -2,9 +2,6 @@ stages:
   - test
   - deploy
 
-variables:
-  GIT_STRATEGY: none
-
 test:
   stage: test
   image: python:3.9
