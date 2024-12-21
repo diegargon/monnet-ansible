@@ -27,10 +27,10 @@ deploy_to_github:
     - git fetch github main
     - git checkout -b main || git checkout main    
 #    - git pull --rebase --strategy=recursive --strategy-option=ours github main || true
-    - git merge github/main --strategy=recursive --strategy-option=ours --allow-unrelated-histories
+#    - git merge github/main --strategy=recursive --strategy-option=ours --allow-unrelated-histories
     - git add .
     - git diff .gitlab-ci.yml
     - git status
     - git commit -m "Deploy changes from GitLab CI"  || echo "Nothing to commit"
-    - git log
-    - git push -u github main
+#    - git push -u github main
+    - git push --force github main
