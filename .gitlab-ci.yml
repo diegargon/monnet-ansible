@@ -21,7 +21,6 @@ deploy_to_github:
   image: alpine/git
   script:
     - echo "nameserver 192.168.2.126" > /etc/resolv.conf
-    - sleep 10 # Trying avoid dns resolution problems
     - git config --global user.name "GitLabCI"
     - git config --global user.email "ci-bot@no.domain"
     
