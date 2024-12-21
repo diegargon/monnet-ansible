@@ -1,5 +1,9 @@
 stages:
   - test
+  - deploy
+
+variables:
+  GIT_STRATEGY: none
 
 test:
   stage: test
@@ -11,3 +15,23 @@ test:
   script:
     - pytest -v tests/test_monnet_ansible.py
 
+deploy_to_github:
+  stage: deploy
+  image: alpine/git
+  script:
+    - git config --global user.name "GitLabCI"
+    - git config --global user.email "ci-bot@no.domain"
+    - git init
+    - ls -al 
+    # Añadir los archivos que necesitas subir (por ejemplo, de un directorio de build)
+    #- cp -r build/* .
+    #- git add .
+
+    # Hacer commit con un mensaje claro
+    #- git commit -m "Deploy changes from GitLab CI"
+
+    # Configurar el repositorio remoto
+    #- git remote add origin https://oauth2:${GITHUB_TOKEN}@github.com/<usuario>/<repositorio>.git
+
+    # Subir los cambios a la rama principal o la deseada
+    #- git push -u origin main
