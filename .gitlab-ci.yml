@@ -1,7 +1,4 @@
 #
-#
-#
-
 stages:
   - test
   - deploy
@@ -36,9 +33,9 @@ deploy_to_github:
     - git remote -v
     - git fetch github main
     - git checkout -b main || git checkout main    
-    - git pull --rebase --strategy=recursive --strategy-option=theirs github main
+    - git pull --rebase --strategy=recursive --strategy-option=theirs github main || true
     - git add .
     - git diff .gitlab-ci.yml
     - git status
-    - git commit -m "Deploy changes from GitLab CI"
+    - git commit -m "Deploy changes from GitLab CI"  || echo "Nothing to commit"
     - git push -u github main
