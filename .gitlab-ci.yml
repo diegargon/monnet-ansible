@@ -23,12 +23,8 @@ deploy_to_github:
     - git config --global user.email "ci-bot@no.domain"
     - git init
     - ls -al 
-    # Añadir los archivos que necesitas subir (por ejemplo, de un directorio de build)
-    #- cp -r build/* .
-    #- git add .
-
-    # Hacer commit con un mensaje claro
-    #- git commit -m "Deploy changes from GitLab CI"
+    - git add .
+    - git commit -m "Deploy changes from GitLab CI"
 
     # Configurar el repositorio remoto
     #- git remote add origin https://oauth2:${GITHUB_TOKEN}@github.com/<usuario>/<repositorio>.git
