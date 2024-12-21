@@ -33,4 +33,5 @@ deploy_to_github:
     - git status
     - git commit -m "Deploy changes from GitLab CI"  || echo "Nothing to commit"
 #    - git push -u github main
+    - git reset --hard HEAD
     - git push --force github main
