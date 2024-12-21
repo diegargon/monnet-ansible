@@ -1,3 +1,7 @@
+#
+# Just initial Near do nothing test
+#
+
 import unittest
 from unittest.mock import patch, MagicMock
 import json

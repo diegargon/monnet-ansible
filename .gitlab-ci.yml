@@ -6,9 +6,11 @@ test:
   stage: test
   image: python:3.9
   before_script:
+    - echo "nameserver 192.168.2.126" > /etc/resolv.conf
+    - sleep 5 # Trying avoid dns resolution problems
     - export PYTHONPATH=$PYTHONPATH:/builds/diegargon/monnet-ansible/src
     - pip install -r requirements.txt
-    - echo "nameserver 192.168.2.126" > /etc/resolv.conf
+    
   script:
     - pytest -v tests/test_monnet_ansible.py
 
@@ -17,6 +19,7 @@ deploy:
   image: python:3.9
   script:
     - echo "nameserver 192.168.2.126" > /etc/resolv.conf
+    - sleep 5 # Trying avoid dns resolution problems
     - git config --global user.name "GitLabCI"
     - git config --global user.email "ci-bot@no.domain"    
     - git remote remove github || true
