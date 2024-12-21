@@ -1,5 +1,3 @@
-# TODO: review deploy script works but is not right
-
 stages:
   - test
   - deploy
@@ -8,10 +6,9 @@ test:
   stage: test
   image: python:3.9
   before_script:
-    - echo "nameserver 192.168.2.126" > /etc/resolv.conf
     - export PYTHONPATH=$PYTHONPATH:/builds/diegargon/monnet-ansible/src
     - pip install -r requirements.txt
-    
+    - echo "nameserver 192.168.2.126" > /etc/resolv.conf
   script:
     - pytest -v tests/test_monnet_ansible.py
 
@@ -21,17 +18,13 @@ deploy_to_github:
   script:
     - echo "nameserver 192.168.2.126" > /etc/resolv.conf
     - git config --global user.name "GitLabCI"
-    - git config --global user.email "ci-bot@no.domain"
-    
+    - git config --global user.email "ci-bot@no.domain"    
     - git remote remove github || true
     - git remote add github https://oauth2:${GITHUB_TOKEN}@github.com/diegargon/monnet-ansible.git
     - git remote -v
     - git fetch github main
     - git checkout -b main || git checkout main    
-    - git pull --rebase --strategy=recursive --strategy-option=ours github main || true
+    - git pull --rebase --strategy=recursive --strategy-option=theirs github main || true
     - git add .
-    - git diff .gitlab-ci.yml
-    - git status
-    - git commit -m "Deploy changes from GitLab CI"  || echo "Nothing to commit"
-#    - git push -u github main
-    - git push --force github main
+    - git commit -m "Deploy changes from GitLab CI" || echo "Nothing to commit"
+    - git push -u github main
