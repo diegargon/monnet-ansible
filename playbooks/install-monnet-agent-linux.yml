@@ -1,0 +1,77 @@
+- name: Install Monnet Agent on Linux
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    agent_config: "{{ agent_config | default({}) }}"
+
+  tasks:
+    - name: Ensure that agent_config exists
+      assert:
+        that:
+          - agent_config is defined
+        fail_msg: "The variable 'agent_config' is required and must be defined."
+
+    - name: Ensure that agent_config is a valid JSON
+      assert:
+        that:
+          - agent_config | to_json is string
+        fail_msg: "The variable 'agent_config' must be a valid JSON object."
+
+    - name: Check if the /opt/monnet-agent directory exists
+      stat:
+        path: /opt/monnet-agent
+      register: opt_monnet_dir
+
+    - name: Create the /opt/monnet-agent directory if it doesn't exist
+      file:
+        path: /opt/monnet-agent
+        state: directory
+        mode: '0755'
+      when: not opt_monnet_dir.stat.exists
+
+    - name: Copy the monnet_agent_linux.py file to /opt/monnet-agent
+      copy:
+        src: ../src/monnet_agent_linux.py
+        dest: /opt/monnet-agent/monnet_agent_linux.py
+        mode: '0755'
+      when: opt_monnet_dir.stat.exists
+
+    - name: Check if the /etc/monnet directory exists
+      stat:
+        path: /etc/monnet
+      register: etc_monnet_dir
+
+    - name: Create the /etc/monnet directory if it doesn't exist
+      file:
+        path: /etc/monnet
+        state: directory
+        mode: '0755'
+      when: not etc_monnet_dir.stat.exists
+
+    - name: Create the agent-config file with pretty JSON configuration
+      copy:
+        dest: /etc/monnet/agent-config
+        content: "{{ agent_config | to_nice_json }}"
+        mode: '0644'
+      when: etc_monnet_dir.stat.exists
+
+    - name: Check if the /etc/systemd/system/monnet-agent.service file exists
+      stat:
+        path: /etc/systemd/system/monnet-agent.service
+      register: systemd_service
+
+    - name: Copy the monnet-agent.service file to /etc/systemd/system
+      copy:
+        src: ../files/monnet-agent.service
+        dest: /etc/systemd/system/monnet-agent.service
+        mode: '0644'
+      when: not systemd_service.stat.exists
+
+    - name: Enable and start the monnet-agent service
+      systemd:
+        name: monnet-agent
+        enabled: yes
+        state: started
+      when: systemd_service.stat.exists
