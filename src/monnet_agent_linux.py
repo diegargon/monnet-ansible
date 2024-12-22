@@ -1,64 +1,20 @@
-"""
-Payload Structure Documentation
-
-{
-    'id': str,                # Unique Host identifier 
-    'cmd': str,               # Command to execute. Example: "ping"
-    'token': str,             # Authentication token. Example: "73a7a18ce78742aa8aadacbe6a918dd8"
-    'interval': int,          # Interval in seconds
-    'version': str,           # Version software. Example:
-    'data': {                 # Contains other info
-        'mydata': {           
-            'data1': 1,       
-            'data2': 1,       
-            'data3': 1        
-        }
-    },
-    'meta': {                 # Metadata about the payload source and environment.
-        'timestamp': str,     # ISO 8601 timestamp of when the payload was generated.
-        'timezone': str,      # Time zone identifier.
-        'hostname': str,      # Hostname of the system that generated the payload.
-        'nodename': str,      # Nodename of the system.
-        'ip_address': str,    # IP address of the system.
-        'agent_version': str, # Version of the agent that generated the payload.
-        'uuid': str           # Unique identifier (UUID) of the system or agent.
-    }
-    
-Response Structure Documentation
-
-{
-    'cmd': str,              # Command response type. Example: "pong"
-    'token': str,            # Token used for authentication or identification. Example: "73a7a18ce78742aa8aadacbe6a918dd8"
-    'version': float,        # Version of the response or system. Example: 0.22
-    'response_msg': bool,    # Indicates if the response message is successful. Example: True
-    'refresh': int,          # Refresh interval in seconds. Example: 5
-    'data': list             # List of data, typically empty in this case. Example: []
-}    
-"""
 import ssl
 import syslog
 import time
 import json
 import signal
-import uuid
 from pathlib import Path
-from datetime import datetime
-
-# Local
-
 import http.client
-import info_linux
-import time_utils
 
-MAX_LOG_LEVEL = "info"
+MAX_LOG_LEVEL = "debug"
 
 # Ruta del archivo de configuracion
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.51"
+AGENT_VERSION = 0.4
+
 running = True
-config = None
 
 def logpo(msg: str, data, priority: str = "info") -> None:
     """
@@ -93,14 +49,11 @@ def log(message: str, priority: str = "info") -> None:
     """
 
     syslog_level = {
-        "emerg": syslog.LOG_EMERG,
-        "alert": syslog.LOG_ALERT,
-        "crit": syslog.LOG_CRIT,
-        "err": syslog.LOG_ERR,
+        "debug": syslog.LOG_DEBUG,
+        "info": syslog.LOG_INFO,
         "warning": syslog.LOG_WARNING,
-        "notice": syslog.LOG_NOTICE,
-        "info": syslog.LOG_INFO,        
-        "debug": syslog.LOG_DEBUG,        
+        "error": syslog.LOG_ERR,
+        "critical": syslog.LOG_CRIT,
     }
 
     if priority not in syslog_level:
@@ -113,30 +66,6 @@ def log(message: str, priority: str = "info") -> None:
         syslog.syslog(syslog_level[priority], message)
         syslog.closelog()
 
-def get_meta():
-    """
-    Builds metadata
-    Returns:
-        dict: Dict with metadata
-    """
-
-    timestamp = time_utils.get_datatime()
-    local_timezone = time_utils.get_local_timezone()
-    hostname = info_linux.get_hostname()
-    nodename = info_linux.get_nodename()
-    ip_address = info_linux.get_ip_address(hostname)    
-    _uuid = str(uuid.uuid4())
-
-    return {
-        "timestamp": timestamp,                 # Timestamp en UTC
-        "timezone": str(local_timezone),        # Zona horaria local
-        "hostname": hostname,                   # Nombre del host
-        "nodename": nodename,                   # Nodename
-        "ip_address": ip_address,               # Dirección IP local
-        "agent_version": str(AGENT_VERSION),    # Versión del agente
-        "uuid": _uuid                            # ID único de la petición
-    }
-    
 def load_config(file_path):
     """Carga la configuracion desde un archivo JSON."""
     try:
@@ -151,230 +80,100 @@ def load_config(file_path):
                 "server_endpoint": config.get("server_endpoint", "/")
             }
     except Exception as e:
-        log(f"Error loading configuration: {e}", "err")
+        log(f"Error loading configuration: {e}", "error")
         return None
 
-def send_notification(type, data):
-    """Send notification to server. No response"""
-    global config
-        
-    token = config["token"]
-    id = config["id"]
-    ignore_cert = config["ignore_cert"]
-    server_host = config["server_host"]
-    server_endpoint = config["server_endpoint"]
-    meta = get_meta()
-    if type == 'starting':
-        data["msg"] = data["msg"].strftime("%H:%M:%S")
-    data["type"] = type
-    
+def send_request(id, token, server_host, server_endpoint, ignore_cert):
+    """Envia una peticion al servidor."""
     payload = {
         "id": id,
-        "cmd": "notification",
+        "cmd": "ping",
         "token": token,
-        "version": AGENT_VERSION,        
-        "data":  data or {},
-        "meta": meta
+        "version": AGENT_VERSION,
+        "data": []
     }
-
     try: 
         if ignore_cert:
             context = ssl._create_unverified_context()
         else:
             context = None
-        connection = http.client.HTTPSConnection(server_host, context=context)
+        connection = http.client.HTTPSConnection(server_host, context = context)       
         headers = {"Content-Type": "application/json"}
         connection.request("POST", server_endpoint, body=json.dumps(payload), headers=headers)
-        log(f"Notification sent: {payload}", "debug")
-    except Exception as e:
-        log(f"Error sending notification: {e}", "err")
-    finally:
-        connection.close()
-        
-def send_request(cmd="ping", data=None):
-    """
-    Send request to server.
-
-    Args:
-        cmd (str): Command
-        data (dict): Extra data
-
-    Returns:
-        dict or None: Server response o None if error
-    """
-    global config
-
-    # Datos básicos de configuración
-    token = config["token"]
-    id = config["id"]
-    interval = config["interval"]
-    ignore_cert = config["ignore_cert"]
-    server_host = config["server_host"]
-    server_endpoint = config["server_endpoint"]
-    meta = get_meta()
-    payload = {
-        "id": id,
-        "cmd": cmd,
-        "token": token,
-        "version": AGENT_VERSION,
-        "data": data or {},
-        "meta": meta
-    }
-
-    try:
-        # Accept all certs
-        if ignore_cert:
-            context = ssl._create_unverified_context()
-        else:
-            context = None
-
-        connection = http.client.HTTPSConnection(server_host, context=context)
-        headers = {"Content-Type": "application/json"}
-        log(f"Payload: {payload}", "debug")
-        connection.request("POST", server_endpoint, body=json.dumps(payload), headers=headers)
-        # Response
         response = connection.getresponse()
         raw_data = response.read().decode()
         log(f"Raw response: {raw_data}", "debug")
-
-        if response.status == 200:
-            if raw_data:
+        
+        if response.status == 200:  
+            if raw_data:          
                 return json.loads(raw_data)
             else:
-                log("Empty response from server", "err")
+                 log("Empty response from server", "error")
         else:
-            log(f"Error HTTP: {response.status} {response.reason}, Respuesta: {raw_data}", "err")
-
+            log(f"Error HTTP: {response.status} {response.reason}, Respuesta: {raw_data}", "error")
+        
     except Exception as e:
-        log(f"Error on request: {e}", "err")
+        log(f"Error on request: {e}", "error")
     finally:
-        # Close
         connection.close()
-
     return None
 
 def validate_response(response, token):
     """Valida la respuesta recibida."""
     if response and response.get("cmd") == "pong" and response.get("token") == token:
         return response
-    log("Invalid response from server or wrong token.", "warning")
+    log("Invalid response or wrong token.", "warning")
     return None
 
 def handle_signal(signum, frame):
     """Maneja las senales de inicio y detencion del daemon."""
     global running
-    global config
-    data = {}
-    data["msg"] = f"Signal receive {signum}"
-    send_notification('signal', data)
     if signum in (signal.SIGINT, signal.SIGTERM):
-        log(f"Signal {signum} finish receive. Stopping app...", "notice")
+        log("Signal finish receive. Stopping app...", "info")
         running = False
 
-def validate_config():
-    """
-    Validates that all required keys exist in the config and are not empty.
-    
-    :param config: dict containing configuration values.
-    :param required_keys: list of keys to validate.
-    :return: Tue or Raises ValueError if validation fails.
-    """
-    global config
-    
-    required_keys = ["token", "id", "default_interval", "ignore_cert", "server_host", "server_endpoint"]
-    
-    missing_keys = [key for key in required_keys if not config.get(key)]
-    if missing_keys:
-        raise ValueError(f"Missing or invalid values for keys: {', '.join(missing_keys)}")
-    else:
-        log("Configuration is valid", "debug")
-    return True
-
 def main():
-    global running        
-    global config
+    global running
     
-    last_load_avg = None
-    # Send load 5m for stats every 5m
-    last_loadavg_stats_sent = 0   
-    last_memory_info  = None
-    last_disk_info = None
-  
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
     config = load_config(CONFIG_FILE_PATH)
     if not config:
-        log("Cant load config. Finishing", "err")
+        log("Cant load config. Finishing", "error")
         return
 
-    try:
-        validate_config()
-    except ValueError as e:
-        log(str(e), "err")
-        return     
-    
     token = config["token"]
-    config["interval"] = config["default_interval"]
+    if not token:
+        log("No valid token in config file. Finishing.", "error")
+        return
+    id = config["id"]
+    interval = config["default_interval"]
+    ignore_cert = config["ignore_cert"]
+    server_host = config["server_host"]
+    server_endpoint = config["server_endpoint"]
 
     # Configurar manejo de senales
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    starting_data = {
-        'msg': datetime.now().time(),
-        'ncpu': info_linux.get_cpus(),
-        'uptime': info_linux.get_uptime()       
-    }
-    send_notification('starting', starting_data)
-    
     while running:
-        extra_data = {}
-        current_load_avg = info_linux.get_load_avg()
-        current_memory_info = info_linux.get_memory_info()
-        current_disk_info = info_linux.get_disks_info()
-        
-        current_time = time.time() 
-        
-        if current_load_avg != last_load_avg:
-            last_load_avg = current_load_avg
-            extra_data.update(current_load_avg)
-            
-        if (current_time - last_loadavg_stats_sent) > (5 * 60):
-            extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
-            last_loadavg_stats_sent = current_time                
-            
-        if (current_memory_info != last_memory_info):
-            last_memory_info = current_memory_info
-            extra_data.update(current_memory_info)
-        
-        if (current_disk_info != last_disk_info):
-            last_disk_info = current_disk_info
-            extra_data.update(current_disk_info)
-       
-
-        log("Sending ping to server. " + str(AGENT_VERSION), "debug")
-        response = send_request(cmd="ping", data=extra_data)
-
+        log("Seding request to server...", "debug")
+        response = send_request(id, token, server_host, server_endpoint, ignore_cert)
 
         if response:
-            log("Response receive... validating", "debug")
             valid_response = validate_response(response, token)
-            if valid_response:                
+            if valid_response:
                 data = valid_response.get("data", {})
-                new_interval = valid_response.get("refresh")
-                if new_interval and config['interval'] != int(new_interval):
-                    config["interval"] = new_interval
-                    log(f"Interval update to {config['interval']} seconds", "info")
-                if isinstance(data, dict) and "something" in data:
-                    # example
+                if isinstance(data, dict) and "refresh" in data:
                     try:
-                        pass
+                        new_interval = int(data["refresh"])
+                        if (interval != new_interval):
+                            interval = new_interval
+                            log(f"Interval update to {interval} seconds", "info")
                     except ValueError:
-                        log("invalid", "warning")                        
-            else:
-                log("Invalid response receive", "warning")
-        log(f"Sleeping for {config['interval']} seconds", "debug")                
-        time.sleep(config["interval"])
+                        log("invalid refresh, using last valid interval.", "warning")
+
+        time.sleep(interval)
 
 if __name__ == "__main__":
     main()
