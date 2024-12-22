@@ -1,0 +1,17 @@
+[Unit]
+Description=Monnet Agent Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/monnet-agent/monnet_agent.py
+WorkingDirectory=/opt/monnet-agent
+User=root
+Group=root
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=syslog
+SyslogIdentifier=monnet-agent
+
+[Install]
+WantedBy=multi-user.target

@@ -35,6 +35,7 @@ import os
 import threading
 from time import sleep
 
+MAX_LOG_LEVEL = "info"
 VERSION = 0
 MIN_VERSION = 35
 HOST = 'localhost' 
@@ -284,6 +285,7 @@ def log(message: str, priority: str = "info") -> None:
     """
 
     syslog_level = {
+        "debug": syslog.LOG_DEBUG,
         "info": syslog.LOG_INFO,
         "warning": syslog.LOG_WARNING,
         "error": syslog.LOG_ERR,
@@ -293,9 +295,10 @@ def log(message: str, priority: str = "info") -> None:
     if priority not in syslog_level:
         raise ValueError(f"Invalid priority level: {priority}. Valid options are {list(syslog_level.keys())}")
 
-    syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_USER)
-    syslog.syslog(syslog_level[priority], message)
-    syslog.closelog()
+    if syslog_level[priority] <= syslog_level[MAX_LOG_LEVEL]:
+        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_USER)
+        syslog.syslog(syslog_level[priority], message)
+        syslog.closelog()
 
 
 """
