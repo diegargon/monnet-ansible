@@ -6,7 +6,7 @@ import signal
 from pathlib import Path
 import http.client
 
-MAX_LOG_LEVEL = "info"
+MAX_LOG_LEVEL = "debug"
 
 # Ruta del archivo de configuracion
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
