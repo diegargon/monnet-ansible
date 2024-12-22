@@ -1,17 +1,19 @@
+import ssl
 import syslog
 import time
 import json
 import signal
 from pathlib import Path
-from http.client import HTTPSConnection
+import http.client
 
 MAX_LOG_LEVEL = "info"
 
-# Ruta del archivo de configuración
+# Ruta del archivo de configuracion
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.2"
+AGENT_VERSION = 0.4
+
 running = True
 
 def logpo(msg: str, data, priority: str = "info") -> None:
@@ -65,7 +67,7 @@ def log(message: str, priority: str = "info") -> None:
         syslog.closelog()
 
 def load_config(file_path):
-    """Carga la configuración desde un archivo JSON."""
+    """Carga la configuracion desde un archivo JSON."""
     try:
         with open(file_path, "r") as file:
             config = json.load(file)
@@ -73,16 +75,16 @@ def load_config(file_path):
                 "id": config.get("id"),
                 "token": config.get("token"),
                 "default_interval": config.get("default_interval", 10),
-                "ignore_cert": config.get("ignore_cert", False),
+                "ignore_cert": config.get("ignore_cert", True),
                 "server_host": config.get("server_host", "localhost"),
                 "server_endpoint": config.get("server_endpoint", "/")
             }
     except Exception as e:
-        log(f"Error al cargar la configuración: {e}", "error")
+        log(f"Error loading configuration: {e}", "error")
         return None
 
 def send_request(id, token, server_host, server_endpoint, ignore_cert):
-    """Envía una petición al servidor."""
+    """Envia una peticion al servidor."""
     payload = {
         "id": id,
         "cmd": "ping",
@@ -90,24 +92,28 @@ def send_request(id, token, server_host, server_endpoint, ignore_cert):
         "version": AGENT_VERSION,
         "data": []
     }
-    try:
-        connection = HTTPSConnection(server_host, context=None if ignore_cert else None)
+    try: 
+        if ignore_cert:
+            context = ssl._create_unverified_context()
+        else:
+            context = None
+        connection = http.client.HTTPSConnection(server_host, context = context)       
         headers = {"Content-Type": "application/json"}
         connection.request("POST", server_endpoint, body=json.dumps(payload), headers=headers)
         response = connection.getresponse()
         raw_data = response.read().decode()
-        log(f"Respuesta cruda recibida: {raw_data}", "debug")
+        log(f"Raw response: {raw_data}", "debug")
         
         if response.status == 200:  
             if raw_data:          
                 return json.loads(raw_data)
             else:
-                 log("Respuesta vacía del servidor", "error")
+                 log("Empty response from server", "error")
         else:
             log(f"Error HTTP: {response.status} {response.reason}, Respuesta: {raw_data}", "error")
         
     except Exception as e:
-        log(f"Error al realizar la solicitud: {e}", "error")
+        log(f"Error on request: {e}", "error")
     finally:
         connection.close()
     return None
@@ -116,28 +122,29 @@ def validate_response(response, token):
     """Valida la respuesta recibida."""
     if response and response.get("cmd") == "pong" and response.get("token") == token:
         return response
-    log("Respuesta no válida o token no coincide.", "warning")
+    log("Invalid response or wrong token.", "warning")
     return None
 
 def handle_signal(signum, frame):
-    """Maneja las señales de inicio y detención del daemon."""
+    """Maneja las senales de inicio y detencion del daemon."""
     global running
     if signum in (signal.SIGINT, signal.SIGTERM):
-        log("Señal de terminación recibida. Deteniendo el programa...", "info")
+        log("Signal finish receive. Stopping app...", "info")
         running = False
 
 def main():
     global running
-
-    # Cargar la configuración desde el archivo
+    
+    log("Init monnet linux agent", "info")
+    # Cargar la configuracion desde el archivo
     config = load_config(CONFIG_FILE_PATH)
     if not config:
-        log("No se pudo cargar la configuración. Terminando el programa.", "error")
+        log("Cant load config. Finishing", "error")
         return
 
     token = config["token"]
     if not token:
-        log("El archivo de configuración no contiene un token válido. Terminando el programa.", "error")
+        log("No valid token in config file. Finishing.", "error")
         return
     id = config["id"]
     interval = config["default_interval"]
@@ -145,12 +152,12 @@ def main():
     server_host = config["server_host"]
     server_endpoint = config["server_endpoint"]
 
-    # Configurar manejo de señales
+    # Configurar manejo de senales
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
     while running:
-        log("Enviando solicitud al servidor...", "debug")
+        log("Seding request to server...", "debug")
         response = send_request(id, token, server_host, server_endpoint, ignore_cert)
 
         if response:
@@ -162,9 +169,9 @@ def main():
                         new_interval = int(data["refresh"])
                         if (interval != new_interval):
                             interval = new_interval
-                            log(f"Intervalo de actualización modificado a {interval} segundos.", "info")
+                            log(f"Interval update to {interval} seconds", "info")
                     except ValueError:
-                        log("Valor de 'refresh' no es válido, usando el intervalo anterior.", "warning")
+                        log("invalid refresh, using last valid interval.", "warning")
 
         time.sleep(interval)
 

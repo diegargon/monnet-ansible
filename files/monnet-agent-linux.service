@@ -1,9 +1,9 @@
 [Unit]
-Description=Monnet Agent Service
+Description=Monnet Agent Linux Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /opt/monnet-agent/monnet_agent.py
+ExecStart=/usr/bin/python3 /opt/monnet-agent/monnet_agent_linux.py
 WorkingDirectory=/opt/monnet-agent
 User=root
 Group=root
