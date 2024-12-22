@@ -6,13 +6,13 @@ import signal
 from pathlib import Path
 import http.client
 
-MAX_LOG_LEVEL = "debug"
+MAX_LOG_LEVEL = "info"
 
 # Ruta del archivo de configuracion
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = 0.8
+AGENT_VERSION = 0.4
 
 running = True
 
@@ -83,24 +83,15 @@ def load_config(file_path):
         log(f"Error loading configuration: {e}", "error")
         return None
 
-def send_request(config):
-    """ Send request to server """
-    token = config["token"]
-    id = config["id"]
-    interval = config["default_interval"]
-    ignore_cert = config["ignore_cert"]
-    server_host = config["server_host"]
-    server_endpoint = config["server_endpoint"]    
-    
+def send_request(id, token, server_host, server_endpoint, ignore_cert):
+    """Envia una peticion al servidor."""
     payload = {
         "id": id,
         "cmd": "ping",
         "token": token,
-        "interval": interval,
         "version": AGENT_VERSION,
         "data": []
     }
-    
     try: 
         if ignore_cert:
             context = ssl._create_unverified_context()
@@ -141,22 +132,8 @@ def handle_signal(signum, frame):
         log("Signal finish receive. Stopping app...", "info")
         running = False
 
-def validate_config(config):
-    """
-    Validates that all required keys exist in the config and are not empty.
-    
-    :param config: dict containing configuration values.
-    :param required_keys: list of keys to validate.
-    :return: None. Raises ValueError if validation fails.
-    """
-    required_keys = ["token", "id", "default_interval", "ignore_cert", "server_host", "server_endpoint"]
-    
-    missing_keys = [key for key in required_keys if not config.get(key)]
-    if missing_keys:
-        raise ValueError(f"Missing or invalid values for keys: {', '.join(missing_keys)}")
-
 def main():
-    global running        
+    global running
     
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
@@ -165,22 +142,23 @@ def main():
         log("Cant load config. Finishing", "error")
         return
 
-    try:
-        validate_config(config)
-    except ValueError as e:
-        log(str(e), "error")
-        return     
-    
     token = config["token"]
+    if not token:
+        log("No valid token in config file. Finishing.", "error")
+        return
+    id = config["id"]
     interval = config["default_interval"]
+    ignore_cert = config["ignore_cert"]
+    server_host = config["server_host"]
+    server_endpoint = config["server_endpoint"]
 
     # Configurar manejo de senales
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
     while running:
-        log("Sending request to server. " + str(AGENT_VERSION), "debug")
-        response = send_request(config)
+        log("Seding request to server...", "debug")
+        response = send_request(id, token, server_host, server_endpoint, ignore_cert)
 
         if response:
             valid_response = validate_response(response, token)

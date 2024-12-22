@@ -37,7 +37,7 @@ from time import sleep
 
 MAX_LOG_LEVEL = "info"
 VERSION = 0
-MIN_VERSION = 35
+MIN_VERSION = 36
 HOST = 'localhost' 
 PORT = 65432 
 
@@ -131,82 +131,6 @@ def run_server():
             log(f"Error en el servidor: {str(e)}", "error")
             error_message = {"status": "error", "message": f"Error en el servidor: {str(e)}"}
             print(json.dumps(error_message))
-
-"""
-def run_server():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.bind((HOST, PORT))
-            s.listen()
-            log(f"v{VERSION}.{MIN_VERSION}: Esperando conexión en {HOST}:{PORT}...", "info")
-            
-            # Aceptar una conexión entrante (servidor web será quien se conecte)
-            conn, addr = s.accept()
-            with conn:
-                log(f"Conexión establecida desde {addr}", "info")
-                
-                while True:
-                    data = conn.recv(1024)
-
-                    if not data:
-                        break  # Salir si no se recibe nada
-                    logpo("Data: ", data)
-                    try:
-                        # Convertir los datos recibidos en formato JSON
-                        request = json.loads(data.decode())
-                        playbook = request.get('playbook')
-                        extra_vars = request.get('extra_vars', {})
-                        ip = request.get('ip', None)
-                        limit = request.get('limit', None) 
-                        user = request.get('user', "ansible") 
-
-                        # Verificar que se haya proporcionado un playbook
-                        if not playbook:
-                            response = {"status": "error", "message": "Playbook no especificado"}
-                        else:
-                            try:
-                                # Ejecutar el playbook y obtener el resultado
-                                result = run_ansible_playbook(playbook, extra_vars, ip=ip, user=user, limit=limit)
-
-                                # Convertir el resultado JSON en un diccionario
-                                result_data = json.loads(result)  # Se espera que 'result' sea un JSON válido
-                                logpo("ResultData: ", result_data)
-                                response = {
-                                    "version": str(VERSION) + '.' + str(MIN_VERSION) ,
-                                    "status": "success",
-                                    "result": {}                                    
-                                }
-                                response.update(result_data)
-                            except json.JSONDecodeError as e:
-                                response = {"status": "error", "message": "Error al decodificar JSON: " + str(e)}
-                            except Exception as e:
-                                response = {"status": "error", "message": "Error ejecutando el playbook: " + str(e)}
-                        logpo("Response: ", response)
-                        # Enviar la respuesta de vuelta al cliente en formato JSON
-                        conn.sendall(json.dumps(response).encode())
-                    
-                    except Exception as e:
-                        tb = traceback.extract_tb(e.__traceback__)
-                        relevant_trace = [frame for frame in tb if "monnet_ansible.py" in frame.filename]
-                        if relevant_trace:
-                            last_trace = relevant_trace[-1]
-                        else:                            
-                            last_trace = tb[-1]
-
-                        error_message = {
-                            "status": "error",
-                            "message": str(e),
-                            "file": last_trace.filename,
-                            "line": last_trace.lineno
-                        }
-                        conn.sendall(json.dumps(error_message).encode())
-            log(f"Conexión con {addr} cerrada", "info")
-        except Exception as e:            
-            log(f"Error en el servidor: {str(e)}", "error")
-            error_message = {"status": "error", "message": f"Error en el servidor: {str(e)}"}
-            print(json.dumps(error_message))
-
-"""
 
 def run_ansible_playbook(playbook, extra_vars=None, ip=None, user=None, limit=None):
     # extra vars to json
