@@ -1,0 +1,7 @@
+- name: Get load statistics via setup module
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather system information
+      setup:
+      register: system_info

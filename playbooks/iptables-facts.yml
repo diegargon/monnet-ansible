@@ -1,10 +1,9 @@
-- name: Gather iptables state
+- name: Gather iptables facts
   hosts: all
   tasks:
-  - name: get current state of the firewall
-    community.general.iptables_state:
-      state: saved
-      path: /tmp/iptables
-    check_mode: true
-    changed_when: false
-    register: iptables_state
+    - name: Get iptables facts
+      iptables_facts:
+
+    - name: Show iptables facts
+      debug:
+        msg: "{{ ansible_iptables }}"
