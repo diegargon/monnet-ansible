@@ -12,7 +12,7 @@ MAX_LOG_LEVEL = "debug"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = 0.6
+AGENT_VERSION = 0.7
 
 running = True
 
@@ -96,6 +96,7 @@ def send_request(config):
         "id": id,
         "cmd": "ping",
         "token": token,
+        "interval": interval,
         "version": AGENT_VERSION,
         "data": []
     }
@@ -140,7 +141,7 @@ def handle_signal(signum, frame):
         log("Signal finish receive. Stopping app...", "info")
         running = False
 
-def validate_config(config, required_keys):
+def validate_config(config):
     """
     Validates that all required keys exist in the config and are not empty.
     
@@ -148,14 +149,14 @@ def validate_config(config, required_keys):
     :param required_keys: list of keys to validate.
     :return: None. Raises ValueError if validation fails.
     """
+    required_keys = ["token", "id", "default_interval", "ignore_cert", "server_host", "server_endpoint"]
+    
     missing_keys = [key for key in required_keys if not config.get(key)]
     if missing_keys:
         raise ValueError(f"Missing or invalid values for keys: {', '.join(missing_keys)}")
 
 def main():
-    global running
-    
-    required_keys = ["token", "id", "default_interval", "ignore_cert", "server_host", "server_endpoint"]
+    global running        
     
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
@@ -165,7 +166,7 @@ def main():
         return
 
     try:
-        validate_config(config, required_keys)
+        validate_config(config)
     except ValueError as e:
         log(str(e), "error")
         return     
@@ -178,7 +179,7 @@ def main():
     signal.signal(signal.SIGTERM, handle_signal)
 
     while running:
-        log("Seding request to server...", "debug")
+        log("Sending request to server. " + str(AGENT_VERSION), "debug")
         response = send_request(config)
 
         if response:
