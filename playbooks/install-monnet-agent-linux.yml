@@ -66,5 +66,5 @@
       systemd:
         name: monnet-agent-linux
         enabled: yes
-        state: started
+        state: restarted
       when: systemd_service.stat.exists
