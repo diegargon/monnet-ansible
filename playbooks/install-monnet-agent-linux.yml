@@ -8,32 +8,6 @@
       debug:
         msg: "{{ agent_config }}"    
 
-    - name: Gather OS family
-      ansible.builtin.setup:
-        filter: ansible_os_family
-
-    - name: Install psutils on Debian-based systems
-      ansible.builtin.package:
-        name: python3-psutil
-        state: present
-      when: ansible_facts['os_family'] == "Debian"
-
-    - name: Install psutils on RedHat-based systems
-      ansible.builtin.package:
-        name: python3-psutil
-        state: present
-      when: ansible_facts['os_family'] == "RedHat"
-
-    - name: Warn if OS family is not recognized
-      ansible.builtin.debug:
-        msg: "Warning: Unsupported OS family detected: {{ ansible_facts['os_family'] }}. Skipping installation."
-      when: ansible_facts['os_family'] not in ["Debian", "RedHat"]
-
-    - name: Warn if OS family could not be detected
-      ansible.builtin.debug:
-        msg: "Warning: OS family could not be detected. Skipping installation."
-      when: ansible_facts['os_family'] is undefined
-      
     - name: Ensure that agent_config exists
       assert:
         that:
@@ -52,10 +26,10 @@
         mode: '0755'
       when: not opt_monnet_dir.stat.exists
 
-    - name: Copy the src/* content to /opt/monnet-agent
+    - name: Copy the monnet_agent_linux.py file to /opt/monnet-agent
       copy:
-        src: ../src/
-        dest: /opt/monnet-agent/
+        src: ../src/monnet_agent_linux.py
+        dest: /opt/monnet-agent/monnet_agent_linux.py
         mode: '0755'
 
     - name: Check if the /etc/monnet directory exists
@@ -75,6 +49,7 @@
         dest: /etc/monnet/agent-config
         content: "{{ agent_config }}"
         mode: '0644'
+      when: etc_monnet_dir.stat.exists
 
     - name: Copy the monnet-agent-linux.service file to /etc/systemd/system
       copy:

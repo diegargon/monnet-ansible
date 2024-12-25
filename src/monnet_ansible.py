@@ -3,25 +3,27 @@ Monnet Ansible Gateway
 
 This code is just a basic/preliminary draft.
 
-Tests
 
+Recive
 {
-  "playbook": "mi_playbook.yml",
-  "extra_vars": {
-    "var1": "valor1",
-    "var2": "valor2"
-  },
-  "ip": "192.168.1.100",
-  "limit": "mi_grupo"
+    "command": playbook
+    "data": {
+        "playbook": "mi_playbook.yml",
+        "extra_vars": {
+            "var1": "valor1",
+            "var2": "valor2"
+        },
+        "ip": "192.168.1.100",
+        "limit": "mi_grupo"
+    }
 }
 
 Netcat test
 
-echo '{"playbook": "test.yml"}' | nc localhost 65432
-echo '{"playbook": "test.yml", "extra_vars": {"var1": "value1", "var2": "value2"}}' | nc localhost 65432
-echo '{"playbook": "linux-df.yml", "{}",  "ip": "192.168.2.117" }' | nc localhost 65432
-echo '{"playbook": "linux-df.yml", "extra_vars": {},  "ip": "192.168.2.117", "user": "ansible" }' | nc localhost 65432
-
+echo '{"command": "playbook", "data": {"playbook": "test.yml"}}' | nc localhost 65432
+echo '{"command": "playbook", "data": {"playbook": "test.yml", "extra_vars": {"var1": "value1", "var2": "value2"}}}' | nc localhost 65432
+echo '{"command": "playbook", "data": {"playbook": "linux-df.yml", "extra_vars": {}, "ip": "192.168.2.117"}}' | nc localhost 65432
+echo '{"command": "playbook", "data": {"playbook": "linux-df.yml", "extra_vars": {}, "ip": "192.168.2.117", "user": "ansible"}}' | nc localhost 65432
 
 """
 import traceback
@@ -35,14 +37,13 @@ import os
 import threading
 from time import sleep
 
-# Local
-from log_linux import log, logpo
-
-VERSION = "0.2"
-MINOR_VERSION = 5
+MAX_LOG_LEVEL = "info"
+VERSION = 0.1
+MIN_VERSION = 3
 HOST = 'localhost' 
 PORT = 65432 
 
+ALLOWED_COMMANDS = ["playbook"]
 
 """
 
@@ -51,7 +52,7 @@ Client Handle
 """
 def handle_client(conn, addr):
     try:
-        log(f"Conexión establecida desde {addr}", "info")
+        log(f"Connection established from {addr}", "info")
 
         while True:
             data = conn.recv(1024)
@@ -59,37 +60,63 @@ def handle_client(conn, addr):
                 break
             logpo("Data: ", data)
             try:
-                # Convertir los datos recibidos en formato JSON
+                # Convert received data to JSON
                 request = json.loads(data.decode())
-                playbook = request.get('playbook')
-                extra_vars = request.get('extra_vars', {})
-                ip = request.get('ip', None)
-                limit = request.get('limit', None) 
-                user = request.get('user', "ansible") 
 
-                # Verificar que se haya proporcionado un playbook
-                if not playbook:
-                    response = {"status": "error", "message": "Playbook no especificado"}
-                else:
-                    try:
-                        # Ejecutar el playbook y obtener el resultado
-                        result = run_ansible_playbook(playbook, extra_vars, ip=ip, user=user, limit=limit)
+                # Check if 'command' exists
+                command = request.get('command')
+                if not command:
+                    response = {"status": "error", "message": "Command not specified"}
+                    conn.sendall(json.dumps(response).encode())
+                    continue
 
-                        # Convertir el resultado JSON en un diccionario
-                        result_data = json.loads(result)  # Se espera que 'result' sea un JSON válido
-                        logpo("ResultData: ", result_data)
-                        response = {
-                            "version": str(VERSION) + '.' + str(MIN_VERSION),
-                            "status": "success",
-                            "result": {}
-                        }
-                        response.update(result_data)
-                    except json.JSONDecodeError as e:
-                        response = {"status": "error", "message": "Error al decodificar JSON: " + str(e)}
-                    except Exception as e:
-                        response = {"status": "error", "message": "Error ejecutando el playbook: " + str(e)}
+                # Validate the command
+                if command not in ALLOWED_COMMANDS:
+                    response = {"status": "error", "message": f"Invalid command: {command}"}
+                    conn.sendall(json.dumps(response).encode())
+                    continue
+
+                # Extract 'data' content
+                data_content = request.get('data', {})
+
+                # Process command-specific logic
+                if command == "playbook":
+                    # Extract fields specific to the "playbook" command
+                    playbook = data_content.get('playbook')
+                    extra_vars = data_content.get('extra_vars', {})
+                    ip = data_content.get('ip', None)
+                    limit = data_content.get('limit', None)
+                    user = data_content.get('user', "ansible")
+
+                    # Ensure playbook is specified
+                    if not playbook:
+                        response = {"status": "error", "message": "Playbook not specified"}
+                    else:
+                        try:
+                            # Execute the playbook and retrieve the result
+                            result = run_ansible_playbook(playbook, extra_vars, ip=ip, user=user, limit=limit)
+
+                            # Convert the result JSON to a dictionary
+                            result_data = json.loads(result)  # Expected valid JSON
+                            logpo("ResultData: ", result_data)
+                            response = {
+                                "version": str(VERSION) + '.' + str(MIN_VERSION),
+                                "status": "success",
+                                "command": command,
+                                "result": {}
+                            }
+                            response.update(result_data)
+                        except json.JSONDecodeError as e:
+                            response = {"status": "error", "message": "Failed to decode JSON: " + str(e)}
+                        except Exception as e:
+                            response = {"status": "error", "message": "Error executing the playbook: " + str(e)}
+                
+                # elif command == "another_command":
+                #     # Handle 'another_command' logic
+                #     pass
+
                 logpo("Response: ", response)
-                # Enviar la respuesta de vuelta al cliente en formato JSON
+                # Send the response back to the client in JSON format
                 conn.sendall(json.dumps(response).encode())
             
             except Exception as e:
@@ -108,11 +135,11 @@ def handle_client(conn, addr):
                 }
                 conn.sendall(json.dumps(error_message).encode())
 
-        log(f"Conexión con {addr} cerrada", "info")
+        log(f"Connection with {addr} closed", "info")
         conn.close()
 
     except Exception as e:
-        log(f"Error manejando la conexión con {addr}: {str(e)}", "error")
+        log(f"Error handling connection with {addr}: {str(e)}", "error")
 """
 
 Server
@@ -177,6 +204,55 @@ def signal_handler(sig, frame):
     """Manejador de señales para capturar la terminación del servicio"""
     log("Monnet ansible server shuttdown...", "info")
     sys.exit(0)
+
+def logpo(msg: str, data, priority: str = "info") -> None:
+    """
+    Converts any Python data type to a string and logs it with a specified priority.
+
+    Args:
+        msg: A str
+        data: The data to log. Can be any Python object.
+        priority (str): The priority level (info, warning, error, critical).
+                        Defaults to 'info'.
+
+    Raises:
+        ValueError: If the priority level is invalid in the underlying `log` function.
+    """
+    try:
+        message = msg + str(data)  # Convert the data to a string representation
+        log(message, priority)  # Call the original log function
+    except ValueError as e:
+        raise ValueError(f"Error in logging: {e}")
+
+def log(message: str, priority: str = "info") -> None:
+    """
+    Sends a message to the system log (syslog) with a specified priority.
+
+    Args:
+        message (str): The message to log.
+        priority (str): The priority level (info, warning, error, critical).
+                        Defaults to 'info'.
+
+    Raises:
+        ValueError: If the priority level is invalid.
+    """
+
+    syslog_level = {
+        "debug": syslog.LOG_DEBUG,
+        "info": syslog.LOG_INFO,
+        "warning": syslog.LOG_WARNING,
+        "error": syslog.LOG_ERR,
+        "critical": syslog.LOG_CRIT,
+    }
+
+    if priority not in syslog_level:
+        raise ValueError(f"Invalid priority level: {priority}. Valid options are {list(syslog_level.keys())}")
+
+    if syslog_level[priority] <= syslog_level[MAX_LOG_LEVEL]:
+        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_USER)
+        syslog.syslog(syslog_level[priority], message)
+        syslog.closelog()
+
 
 """
     Main
