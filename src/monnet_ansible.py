@@ -18,26 +18,12 @@ Recive
     }
 }
 
-Recivia
-
-{
-  "playbook": "mi_playbook.yml",
-  "extra_vars": {
-    "var1": "valor1",
-    "var2": "valor2"
-  },
-  "ip": "192.168.1.100",
-  "limit": "mi_grupo"
-}
-
-
 Netcat test
 
-echo '{"playbook": "test.yml"}' | nc localhost 65432
-echo '{"playbook": "test.yml", "extra_vars": {"var1": "value1", "var2": "value2"}}' | nc localhost 65432
-echo '{"playbook": "linux-df.yml", "{}",  "ip": "192.168.2.117" }' | nc localhost 65432
-echo '{"playbook": "linux-df.yml", "extra_vars": {},  "ip": "192.168.2.117", "user": "ansible" }' | nc localhost 65432
-
+echo '{"command": "playbook", "data": {"playbook": "test.yml"}}' | nc localhost 65432
+echo '{"command": "playbook", "data": {"playbook": "test.yml", "extra_vars": {"var1": "value1", "var2": "value2"}}}' | nc localhost 65432
+echo '{"command": "playbook", "data": {"playbook": "linux-df.yml", "extra_vars": {}, "ip": "192.168.2.117"}}' | nc localhost 65432
+echo '{"command": "playbook", "data": {"playbook": "linux-df.yml", "extra_vars": {}, "ip": "192.168.2.117", "user": "ansible"}}' | nc localhost 65432
 
 """
 import traceback
@@ -53,7 +39,7 @@ from time import sleep
 
 MAX_LOG_LEVEL = "info"
 VERSION = 0.1
-MIN_VERSION = 36
+MIN_VERSION = 3
 HOST = 'localhost' 
 PORT = 65432 
 
