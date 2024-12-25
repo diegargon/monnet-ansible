@@ -3,7 +3,22 @@ Monnet Ansible Gateway
 
 This code is just a basic/preliminary draft.
 
-Tests
+
+Recive
+{
+    "command": playbook
+    "data": {
+        "playbook": "mi_playbook.yml",
+        "extra_vars": {
+            "var1": "valor1",
+            "var2": "valor2"
+        },
+        "ip": "192.168.1.100",
+        "limit": "mi_grupo"
+    }
+}
+
+Recivia
 
 {
   "playbook": "mi_playbook.yml",
@@ -14,6 +29,7 @@ Tests
   "ip": "192.168.1.100",
   "limit": "mi_grupo"
 }
+
 
 Netcat test
 
@@ -36,11 +52,12 @@ import threading
 from time import sleep
 
 MAX_LOG_LEVEL = "info"
-VERSION = 0
+VERSION = 0.1
 MIN_VERSION = 36
 HOST = 'localhost' 
 PORT = 65432 
 
+ALLOWED_COMMANDS = ["playbook"]
 
 """
 
@@ -49,7 +66,7 @@ Client Handle
 """
 def handle_client(conn, addr):
     try:
-        log(f"Conexión establecida desde {addr}", "info")
+        log(f"Connection established from {addr}", "info")
 
         while True:
             data = conn.recv(1024)
@@ -57,37 +74,63 @@ def handle_client(conn, addr):
                 break
             logpo("Data: ", data)
             try:
-                # Convertir los datos recibidos en formato JSON
+                # Convert received data to JSON
                 request = json.loads(data.decode())
-                playbook = request.get('playbook')
-                extra_vars = request.get('extra_vars', {})
-                ip = request.get('ip', None)
-                limit = request.get('limit', None) 
-                user = request.get('user', "ansible") 
 
-                # Verificar que se haya proporcionado un playbook
-                if not playbook:
-                    response = {"status": "error", "message": "Playbook no especificado"}
-                else:
-                    try:
-                        # Ejecutar el playbook y obtener el resultado
-                        result = run_ansible_playbook(playbook, extra_vars, ip=ip, user=user, limit=limit)
+                # Check if 'command' exists
+                command = request.get('command')
+                if not command:
+                    response = {"status": "error", "message": "Command not specified"}
+                    conn.sendall(json.dumps(response).encode())
+                    continue
 
-                        # Convertir el resultado JSON en un diccionario
-                        result_data = json.loads(result)  # Se espera que 'result' sea un JSON válido
-                        logpo("ResultData: ", result_data)
-                        response = {
-                            "version": str(VERSION) + '.' + str(MIN_VERSION),
-                            "status": "success",
-                            "result": {}
-                        }
-                        response.update(result_data)
-                    except json.JSONDecodeError as e:
-                        response = {"status": "error", "message": "Error al decodificar JSON: " + str(e)}
-                    except Exception as e:
-                        response = {"status": "error", "message": "Error ejecutando el playbook: " + str(e)}
+                # Validate the command
+                if command not in ALLOWED_COMMANDS:
+                    response = {"status": "error", "message": f"Invalid command: {command}"}
+                    conn.sendall(json.dumps(response).encode())
+                    continue
+
+                # Extract 'data' content
+                data_content = request.get('data', {})
+
+                # Process command-specific logic
+                if command == "playbook":
+                    # Extract fields specific to the "playbook" command
+                    playbook = data_content.get('playbook')
+                    extra_vars = data_content.get('extra_vars', {})
+                    ip = data_content.get('ip', None)
+                    limit = data_content.get('limit', None)
+                    user = data_content.get('user', "ansible")
+
+                    # Ensure playbook is specified
+                    if not playbook:
+                        response = {"status": "error", "message": "Playbook not specified"}
+                    else:
+                        try:
+                            # Execute the playbook and retrieve the result
+                            result = run_ansible_playbook(playbook, extra_vars, ip=ip, user=user, limit=limit)
+
+                            # Convert the result JSON to a dictionary
+                            result_data = json.loads(result)  # Expected valid JSON
+                            logpo("ResultData: ", result_data)
+                            response = {
+                                "version": str(VERSION) + '.' + str(MIN_VERSION),
+                                "status": "success",
+                                "command": command,
+                                "result": {}
+                            }
+                            response.update(result_data)
+                        except json.JSONDecodeError as e:
+                            response = {"status": "error", "message": "Failed to decode JSON: " + str(e)}
+                        except Exception as e:
+                            response = {"status": "error", "message": "Error executing the playbook: " + str(e)}
+                
+                # elif command == "another_command":
+                #     # Handle 'another_command' logic
+                #     pass
+
                 logpo("Response: ", response)
-                # Enviar la respuesta de vuelta al cliente en formato JSON
+                # Send the response back to the client in JSON format
                 conn.sendall(json.dumps(response).encode())
             
             except Exception as e:
@@ -106,11 +149,11 @@ def handle_client(conn, addr):
                 }
                 conn.sendall(json.dumps(error_message).encode())
 
-        log(f"Conexión con {addr} cerrada", "info")
+        log(f"Connection with {addr} closed", "info")
         conn.close()
 
     except Exception as e:
-        log(f"Error manejando la conexión con {addr}: {str(e)}", "error")
+        log(f"Error handling connection with {addr}: {str(e)}", "error")
 """
 
 Server
