@@ -4,6 +4,7 @@ import time
 import json
 import signal
 from pathlib import Path
+from datetime import datetime
 import http.client
 
 MAX_LOG_LEVEL = "debug"
@@ -12,9 +13,9 @@ MAX_LOG_LEVEL = "debug"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = 0.4
-
+AGENT_VERSION = "0.15"
 running = True
+config = None
 
 def logpo(msg: str, data, priority: str = "info") -> None:
     """
@@ -49,11 +50,14 @@ def log(message: str, priority: str = "info") -> None:
     """
 
     syslog_level = {
-        "debug": syslog.LOG_DEBUG,
-        "info": syslog.LOG_INFO,
+        "emerg": syslog.LOG_EMERG,
+        "alert": syslog.LOG_ALERT,
+        "crit": syslog.LOG_CRIT,
+        "err": syslog.LOG_ERR,
         "warning": syslog.LOG_WARNING,
-        "error": syslog.LOG_ERR,
-        "critical": syslog.LOG_CRIT,
+        "notice": syslog.LOG_NOTICE,
+        "info": syslog.LOG_INFO,        
+        "debug": syslog.LOG_DEBUG,        
     }
 
     if priority not in syslog_level:
@@ -80,17 +84,64 @@ def load_config(file_path):
                 "server_endpoint": config.get("server_endpoint", "/")
             }
     except Exception as e:
-        log(f"Error loading configuration: {e}", "error")
+        log(f"Error loading configuration: {e}", "err")
         return None
 
-def send_request(id, token, server_host, server_endpoint, ignore_cert):
-    """Envia una peticion al servidor."""
+def send_notification(type, msg):
+    """Send notification to server. No response"""
+    global config
+    
+    token = config["token"]
+    id = config["id"]
+    ignore_cert = config["ignore_cert"]
+    server_host = config["server_host"]
+    server_endpoint = config["server_endpoint"]
+
+    if type == 'starting':
+        msg = msg.strftime("%H:%M:%S")
+
+    payload = {
+        "id": id,
+        "cmd": "notification",
+        "token": token,
+        "version": AGENT_VERSION,
+        "data": {
+            "type": type,
+            "msg": msg            
+            }        
+    }
+
+    try: 
+        if ignore_cert:
+            context = ssl._create_unverified_context()
+        else:
+            context = None
+        connection = http.client.HTTPSConnection(server_host, context=context)
+        headers = {"Content-Type": "application/json"}
+        connection.request("POST", server_endpoint, body=json.dumps(payload), headers=headers)
+        log(f"Notification sent: {payload['data']['type']} {payload['data']['msg']}", "debug")
+    except Exception as e:
+        log(f"Error sending notification: {e}", "err")
+    finally:
+        connection.close()
+        
+def send_request():    
+    """ Send request to server """
+    global config
+    
+    token = config["token"]
+    id = config["id"]
+    interval = config["default_interval"]
+    ignore_cert = config["ignore_cert"]
+    server_host = config["server_host"]
+    server_endpoint = config["server_endpoint"]    
+    
     payload = {
         "id": id,
         "cmd": "ping",
         "token": token,
         "version": AGENT_VERSION,
-        "data": []
+        "data": {}
     }
     try: 
         if ignore_cert:
@@ -108,12 +159,12 @@ def send_request(id, token, server_host, server_endpoint, ignore_cert):
             if raw_data:          
                 return json.loads(raw_data)
             else:
-                 log("Empty response from server", "error")
+                 log("Empty response from server", "err")
         else:
-            log(f"Error HTTP: {response.status} {response.reason}, Respuesta: {raw_data}", "error")
+            log(f"Error HTTP: {response.status} {response.reason}, Respuesta: {raw_data}", "err")
         
     except Exception as e:
-        log(f"Error on request: {e}", "error")
+        log(f"Error on request: {e}", "err")
     finally:
         connection.close()
     return None
@@ -122,26 +173,52 @@ def validate_response(response, token):
     """Valida la respuesta recibida."""
     if response and response.get("cmd") == "pong" and response.get("token") == token:
         return response
-    log("Invalid response or wrong token.", "warning")
+    log("Invalid response from server or wrong token.", "warning")
     return None
 
 def handle_signal(signum, frame):
     """Maneja las senales de inicio y detencion del daemon."""
     global running
+    global config
+    
+    send_notification('signal', f"Signal receive {signum}")
     if signum in (signal.SIGINT, signal.SIGTERM):
-        log("Signal finish receive. Stopping app...", "info")
+        log(f"Signal {signum} finish receive. Stopping app...", "notice")
         running = False
 
+def validate_config():
+    """
+    Validates that all required keys exist in the config and are not empty.
+    
+    :param config: dict containing configuration values.
+    :param required_keys: list of keys to validate.
+    :return: None. Raises ValueError if validation fails.
+    """
+    global config
+    
+    required_keys = ["token", "id", "default_interval", "ignore_cert", "server_host", "server_endpoint"]
+    
+    missing_keys = [key for key in required_keys if not config.get(key)]
+    if missing_keys:
+        raise ValueError(f"Missing or invalid values for keys: {', '.join(missing_keys)}")
+
 def main():
-    global running
+    global running        
+    global config
     
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
     config = load_config(CONFIG_FILE_PATH)
     if not config:
-        log("Cant load config. Finishing", "error")
+        log("Cant load config. Finishing", "err")
         return
 
+    try:
+        validate_config()
+    except ValueError as e:
+        log(str(e), "err")
+        return     
+    
     token = config["token"]
     if not token:
         log("No valid token in config file. Finishing.", "error")
@@ -156,9 +233,11 @@ def main():
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
+    send_notification('starting', datetime.now().time())
+    
     while running:
-        log("Seding request to server...", "debug")
-        response = send_request(id, token, server_host, server_endpoint, ignore_cert)
+        log("Sending request to server. " + str(AGENT_VERSION), "debug")
+        response = send_request()
 
         if response:
             valid_response = validate_response(response, token)
