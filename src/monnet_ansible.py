@@ -37,11 +37,9 @@ import os
 import threading
 from time import sleep
 
-# Local
-from log_linux import log, logpo
-
-VERSION = "0.2"
-MINOR_VERSION = 5
+MAX_LOG_LEVEL = "info"
+VERSION = 0.1
+MIN_VERSION = 3
 HOST = 'localhost' 
 PORT = 65432 
 
@@ -206,6 +204,55 @@ def signal_handler(sig, frame):
     """Manejador de señales para capturar la terminación del servicio"""
     log("Monnet ansible server shuttdown...", "info")
     sys.exit(0)
+
+def logpo(msg: str, data, priority: str = "info") -> None:
+    """
+    Converts any Python data type to a string and logs it with a specified priority.
+
+    Args:
+        msg: A str
+        data: The data to log. Can be any Python object.
+        priority (str): The priority level (info, warning, error, critical).
+                        Defaults to 'info'.
+
+    Raises:
+        ValueError: If the priority level is invalid in the underlying `log` function.
+    """
+    try:
+        message = msg + str(data)  # Convert the data to a string representation
+        log(message, priority)  # Call the original log function
+    except ValueError as e:
+        raise ValueError(f"Error in logging: {e}")
+
+def log(message: str, priority: str = "info") -> None:
+    """
+    Sends a message to the system log (syslog) with a specified priority.
+
+    Args:
+        message (str): The message to log.
+        priority (str): The priority level (info, warning, error, critical).
+                        Defaults to 'info'.
+
+    Raises:
+        ValueError: If the priority level is invalid.
+    """
+
+    syslog_level = {
+        "debug": syslog.LOG_DEBUG,
+        "info": syslog.LOG_INFO,
+        "warning": syslog.LOG_WARNING,
+        "error": syslog.LOG_ERR,
+        "critical": syslog.LOG_CRIT,
+    }
+
+    if priority not in syslog_level:
+        raise ValueError(f"Invalid priority level: {priority}. Valid options are {list(syslog_level.keys())}")
+
+    if syslog_level[priority] <= syslog_level[MAX_LOG_LEVEL]:
+        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_USER)
+        syslog.syslog(syslog_level[priority], message)
+        syslog.closelog()
+
 
 """
     Main
