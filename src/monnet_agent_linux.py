@@ -13,7 +13,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.21"
+AGENT_VERSION = "0.22"
 running = True
 config = None
 
@@ -131,7 +131,7 @@ def send_request():
     
     token = config["token"]
     id = config["id"]
-    interval = config["default_interval"]
+    interval = config["interval"]
     ignore_cert = config["ignore_cert"]
     server_host = config["server_host"]
     server_endpoint = config["server_endpoint"]    
@@ -220,14 +220,7 @@ def main():
         return     
     
     token = config["token"]
-    if not token:
-        log("No valid token in config file. Finishing.", "error")
-        return
-    id = config["id"]
-    interval = config["default_interval"]
-    ignore_cert = config["ignore_cert"]
-    server_host = config["server_host"]
-    server_endpoint = config["server_endpoint"]
+    config["interval"] = config["default_interval"]
 
     # Configurar manejo de senales
     signal.signal(signal.SIGINT, handle_signal)
@@ -246,14 +239,16 @@ def main():
                 if isinstance(data, dict) and "refresh" in data:
                     try:
                         new_interval = int(data["refresh"])
-                        if (interval != new_interval):
-                            interval = new_interval
-                            log(f"Interval update to {interval} seconds", "info")
+                        if (config["interval"] != new_interval):
+                            config["interval"] = new_interval
+                            log(f"Interval update to {config['interval']} seconds", "info")
                     except ValueError:
-                        log("invalid refresh, using last valid interval.", "warning")
+                        log("invalid refresh, using default interval.", "warning")
+                        config["interval"] = config["default_interval"]
             else:
                 log("Invalid response receive", "warning")
-        time.sleep(interval)
+        log(f"Sleeping for {config['interval']} seconds", "debug")                
+        time.sleep(config["interval"])
 
 if __name__ == "__main__":
     main()
