@@ -13,7 +13,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.15"
+AGENT_VERSION = "0.21"
 running = True
 config = None
 
@@ -251,7 +251,8 @@ def main():
                             log(f"Interval update to {interval} seconds", "info")
                     except ValueError:
                         log("invalid refresh, using last valid interval.", "warning")
-
+            else:
+                log("Invalid response receive", "warning")
         time.sleep(interval)
 
 if __name__ == "__main__":
