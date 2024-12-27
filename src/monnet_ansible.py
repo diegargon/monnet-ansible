@@ -15,6 +15,7 @@ Recive
         },
         "ip": "192.168.1.100",
         "limit": "mi_grupo"
+        "user": "user" # optional
     }
 }
 
@@ -39,7 +40,7 @@ from time import sleep
 
 MAX_LOG_LEVEL = "info"
 VERSION = 0.1
-MIN_VERSION = 3
+MINOR_VERSION = 4
 HOST = 'localhost' 
 PORT = 65432 
 
@@ -100,7 +101,7 @@ def handle_client(conn, addr):
                             result_data = json.loads(result)  # Expected valid JSON
                             logpo("ResultData: ", result_data)
                             response = {
-                                "version": str(VERSION) + '.' + str(MIN_VERSION),
+                                "version": str(VERSION) + '.' + str(MINOR_VERSION),
                                 "status": "success",
                                 "command": command,
                                 "result": {}
@@ -150,7 +151,7 @@ def run_server():
         try:
             s.bind((HOST, PORT))
             s.listen()
-            log(f"v{VERSION}.{MIN_VERSION}: Esperando conexión en {HOST}:{PORT}...", "info")
+            log(f"v{VERSION}.{MINOR_VERSION}: Esperando conexión en {HOST}:{PORT}...", "info")
             
             while True:
                 conn, addr = s.accept()
