@@ -13,7 +13,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.22"
+AGENT_VERSION = "0.23"
 running = True
 config = None
 
@@ -192,7 +192,7 @@ def validate_config():
     
     :param config: dict containing configuration values.
     :param required_keys: list of keys to validate.
-    :return: None. Raises ValueError if validation fails.
+    :return: Tue or Raises ValueError if validation fails.
     """
     global config
     
@@ -201,6 +201,9 @@ def validate_config():
     missing_keys = [key for key in required_keys if not config.get(key)]
     if missing_keys:
         raise ValueError(f"Missing or invalid values for keys: {', '.join(missing_keys)}")
+    else:
+        log("Configuration is valid", "debug")
+    return True
 
 def main():
     global running        
@@ -233,18 +236,20 @@ def main():
         response = send_request()
 
         if response:
+            log("Response receive... validating", "debug")
             valid_response = validate_response(response, token)
-            if valid_response:
+            if valid_response:                
                 data = valid_response.get("data", {})
-                if isinstance(data, dict) and "refresh" in data:
+                new_interval = valid_response.get("refresh")
+                if new_interval and config['interval'] != int(new_interval):
+                    config["interval"] = new_interval
+                    log(f"Interval update to {config['interval']} seconds", "info")
+                if isinstance(data, dict) and "something" in data:
+                    # example
                     try:
-                        new_interval = int(data["refresh"])
-                        if (config["interval"] != new_interval):
-                            config["interval"] = new_interval
-                            log(f"Interval update to {config['interval']} seconds", "info")
+                        pass
                     except ValueError:
-                        log("invalid refresh, using default interval.", "warning")
-                        config["interval"] = config["default_interval"]
+                        log("invalid", "warning")                        
             else:
                 log("Invalid response receive", "warning")
         log(f"Sleeping for {config['interval']} seconds", "debug")                
