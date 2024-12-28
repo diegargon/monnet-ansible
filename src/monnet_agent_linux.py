@@ -56,7 +56,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.33"
+AGENT_VERSION = "0.45"
 running = True
 config = None
 
@@ -296,9 +296,11 @@ def main():
     global config
     
     last_load_avg = None
+    # Send load 5m for stats every 5m
+    last_loadavg_stats_sent = 0   
     last_memory_info  = None
     last_disk_info = None
-    
+  
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
     config = load_config(CONFIG_FILE_PATH)
@@ -325,12 +327,18 @@ def main():
         extra_data = {}
         current_load_avg = info_linux.get_load_avg()
         current_memory_info = info_linux.get_memory_info()
-        current_disk_info = info_linux.get_disks_info();
+        current_disk_info = info_linux.get_disks_info()
+        
+        current_time = time.time() 
         
         if current_load_avg != last_load_avg:
             last_load_avg = current_load_avg
             extra_data.update(current_load_avg)
-        
+            
+        if (current_time - last_loadavg_stats_sent) > (5 * 60):
+            extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
+            last_loadavg_stats_sent = current_time                
+            
         if (current_memory_info != last_memory_info):
             last_memory_info = current_memory_info
             extra_data.update(current_memory_info)
