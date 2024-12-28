@@ -26,10 +26,10 @@
         mode: '0755'
       when: not opt_monnet_dir.stat.exists
 
-    - name: Copy the monnet_agent_linux.py file to /opt/monnet-agent
+    - name: Copy the src/* content to /opt/monnet-agent
       copy:
-        src: ../src/monnet_agent_linux.py
-        dest: /opt/monnet-agent/monnet_agent_linux.py
+        src: ../src/
+        dest: /opt/monnet-agent/
         mode: '0755'
 
     - name: Check if the /etc/monnet directory exists
