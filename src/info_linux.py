@@ -99,4 +99,4 @@ def get_disks_info():
             except OSError:
                 continue
 
-    return {"disks_info": disks_info}
+    return {"disksinfo": disks_info}

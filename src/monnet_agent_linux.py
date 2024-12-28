@@ -56,7 +56,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.45"
+AGENT_VERSION = "0.46"
 running = True
 config = None
 
