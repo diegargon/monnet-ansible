@@ -1,10 +1,7 @@
 - name: Test Ansible connectivity
   hosts: all
   gather_facts: false
+  
   tasks:
     - name: Ping the host
       ansible.builtin.ping:
-      register: ping_result
-    - name: Ping response
-      debug:
-        msg: "Ping response: {{ ping_result.ping }}"      
