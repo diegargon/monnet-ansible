@@ -100,3 +100,12 @@ def get_disks_info():
                 continue
 
     return {"disksinfo": disks_info}
+
+
+def get_cpus():
+    return os.cpu_count()
+
+def get_uptime():
+    with open('/proc/uptime', 'r') as f:
+        uptime_seconds = float(f.readline().split()[0])
+    return uptime_seconds

@@ -56,7 +56,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.46"
+AGENT_VERSION = "0.50"
 running = True
 config = None
 
@@ -154,10 +154,10 @@ def load_config(file_path):
         log(f"Error loading configuration: {e}", "err")
         return None
 
-def send_notification(type, msg):
+def send_notification(type, data):
     """Send notification to server. No response"""
     global config
-    
+        
     token = config["token"]
     id = config["id"]
     ignore_cert = config["ignore_cert"]
@@ -165,17 +165,15 @@ def send_notification(type, msg):
     server_endpoint = config["server_endpoint"]
     meta = get_meta()
     if type == 'starting':
-        msg = msg.strftime("%H:%M:%S")
-
+        data["msg"] = data["msg"].strftime("%H:%M:%S")
+    data["type"] = type
+    
     payload = {
         "id": id,
         "cmd": "notification",
         "token": token,
         "version": AGENT_VERSION,        
-        "data": {
-            "type": type,
-            "msg": msg            
-            },
+        "data":  data or {},
         "meta": meta
     }
 
@@ -187,7 +185,7 @@ def send_notification(type, msg):
         connection = http.client.HTTPSConnection(server_host, context=context)
         headers = {"Content-Type": "application/json"}
         connection.request("POST", server_endpoint, body=json.dumps(payload), headers=headers)
-        log(f"Notification sent: {payload['data']['type']} {payload['data']['msg']}", "debug")
+        log(f"Notification sent: {payload}", "debug")
     except Exception as e:
         log(f"Error sending notification: {e}", "err")
     finally:
@@ -266,8 +264,9 @@ def handle_signal(signum, frame):
     """Maneja las senales de inicio y detencion del daemon."""
     global running
     global config
-    
-    send_notification('signal', f"Signal receive {signum}")
+    data = {}
+    data["msg"] = f"Signal receive {signum}"
+    send_notification('signal', data)
     if signum in (signal.SIGINT, signal.SIGTERM):
         log(f"Signal {signum} finish receive. Stopping app...", "notice")
         running = False
@@ -321,7 +320,12 @@ def main():
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    send_notification('starting', datetime.now().time())
+    starting_data = {
+        'msg': datetime.now().time(),
+        'ncpu': info_linux.get_cpus(),
+        'uptime': info_linux.get_uptime()       
+    }
+    send_notification('starting', starting_data)
     
     while running:
         extra_data = {}
