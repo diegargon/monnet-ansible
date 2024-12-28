@@ -1,7 +1,9 @@
 """
 Monnet Ansible Gateway
 
-This code is just a basic/preliminary draft.
+This code is just a basic/preliminary draft. 
+
+Originally to do task only ansible relate but will be a move to a more generic monnet-gateway service
 
 
 Recive

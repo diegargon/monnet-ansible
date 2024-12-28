@@ -56,7 +56,7 @@ MAX_LOG_LEVEL = "info"
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Variables globales
-AGENT_VERSION = "0.29"
+AGENT_VERSION = "0.33"
 running = True
 config = None
 
@@ -297,6 +297,7 @@ def main():
     
     last_load_avg = None
     last_memory_info  = None
+    last_disk_info = None
     
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
@@ -324,7 +325,8 @@ def main():
         extra_data = {}
         current_load_avg = info_linux.get_load_avg()
         current_memory_info = info_linux.get_memory_info()
-
+        current_disk_info = info_linux.get_disks_info();
+        
         if current_load_avg != last_load_avg:
             last_load_avg = current_load_avg
             extra_data.update(current_load_avg)
@@ -332,7 +334,11 @@ def main():
         if (current_memory_info != last_memory_info):
             last_memory_info = current_memory_info
             extra_data.update(current_memory_info)
-
+        
+        if (current_disk_info != last_disk_info):
+            last_disk_info = current_disk_info
+            extra_data.update(current_disk_info)
+       
 
         log("Sending ping to server. " + str(AGENT_VERSION), "debug")
         response = send_request(cmd="ping", data=extra_data)
