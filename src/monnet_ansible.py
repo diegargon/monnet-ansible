@@ -39,7 +39,7 @@ import threading
 from time import sleep
 
 MAX_LOG_LEVEL = "info"
-VERSION = 0.1
+VERSION = 0.2
 MINOR_VERSION = 4
 HOST = 'localhost' 
 PORT = 65432 
