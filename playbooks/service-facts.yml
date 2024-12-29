@@ -1,9 +1,10 @@
 - name: Gather service facts
   hosts: all
+  gather_facts: true #need for services
   tasks:
     - name: Gather facts about services
       service_facts:
 
     - name: Show all service facts
       debug:
-        msg: "{{ ansible_services }}"
+        var: "{{ ansible_services }}"
