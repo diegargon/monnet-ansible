@@ -77,7 +77,7 @@ def get_disks_info():
             device, mountpoint, fstype = parts[0], parts[1], parts[2]
 
             # Filter
-            if not device.startswith("/dev/"):
+            if not device.startswith("/dev/") or device == '/dev/fuse':
                 continue
 
             # Info os.statvfs
