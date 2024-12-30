@@ -53,6 +53,12 @@ def get_disks_info():
         dict: Disk partions info Key: disks
     """
     disks_info = []
+    
+    real_filesystems = {
+        "ext4", "ext3", "ext2", "xfs", "zfs", "btrfs", "reiserfs",
+        "vfat", "fat32", "ntfs", "hfsplus", "exfat", "iso9660",
+        "udf", "f2fs", "nfs"
+    }
 
     # Read
     with open("/proc/mounts", "r") as mounts:
@@ -61,7 +67,7 @@ def get_disks_info():
             device, mountpoint, fstype = parts[0], parts[1], parts[2]
 
             # Filter
-            if not device.startswith("/dev/") or device == '/dev/fuse':
+            if fstype not in real_filesystems:
                 continue
 
             # Info os.statvfs
