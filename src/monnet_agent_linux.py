@@ -56,7 +56,7 @@ from event_processor import EventProcessor
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.65"
+AGENT_VERSION = "0.67"
 running = True
 config = None
 
