@@ -1,28 +1,16 @@
-"""
-@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
-"""
-
-import json
 from typing import Optional, Dict, Any
-from log_linux import log
+# Local
+from log_linux import log, logpo
 
 from typing import Optional, Dict, Any
 
 class Datastore:
-    """
-        Keep data and Save/Load from disk in json format
-    """
-    def __init__(self, filename: str = "datastore.json"):
-        """
-        Initialization
-        :param filename: File to save/load data.
-        """
-        self.filename = filename
+    def __init__(self):
+        # Initialization
         self.data: Dict[str, Optional[Dict[str, Any]]] = {
             "last_load_avg": None,
             "last_memory_info": None,
             "last_disk_info": None,
-            "last_iowait": 0,
         }
 
     def update_data(self, key: str, data: Dict[str, Any]):
@@ -33,8 +21,6 @@ class Datastore:
         if key not in self.data:
             log(f"New data set added: {key}")
         self.data[key] = data
-        # TODO save on exit or each X time
-        self.save_data()
 
     def get_data(self, key: str) -> Optional[Dict[str, Any]]:
         """

@@ -15,12 +15,14 @@ def bytes_to_mb(bytes_value):
 
 def get_load_avg():
     load1, load5, load15 = os.getloadavg()
-
+    current_cpu_usage = cpu_usage(load1)
+    
     return {
         "loadavg": {
             "1min": round(load1, 2),
             "5min": round(load5, 2),
-            "15min": round(load15, 2)
+            "15min": round(load15, 2),
+            "usage": round(current_cpu_usage, 2)
         }
     }
 
@@ -101,7 +103,6 @@ def get_disks_info():
 
     return {"disksinfo": disks_info}
 
-
 def get_cpus():
     return os.cpu_count()
 
@@ -109,3 +110,12 @@ def get_uptime():
     with open('/proc/uptime', 'r') as f:
         uptime_seconds = float(f.readline().split()[0])
     return uptime_seconds
+
+def cpu_usage(cpu_load):
+    total_cpus = get_cpus()
+    if total_cpus == 0:
+        return False
+    
+    cpu_usage_percentage = (cpu_load / total_cpus) * 100
+
+    return round(cpu_usage_percentage, 2)    
