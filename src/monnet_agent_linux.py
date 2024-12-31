@@ -36,78 +36,28 @@ Response Structure Documentation
 }    
 """
 import ssl
-import syslog
 import time
 import json
 import signal
 import uuid
+import time
 from pathlib import Path
 from datetime import datetime
+import http.client
 
 # Local
-
-import http.client
+from log_linux import log, logpo
 import info_linux
 import time_utils
+from datastore import Datastore
+from event_processor import EventProcessor
 
-MAX_LOG_LEVEL = "debug"
-
-# Ruta del archivo de configuracion
+# Config file
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
-# Variables globales
-AGENT_VERSION = "0.52"
+# Global Var
+AGENT_VERSION = "0.65"
 running = True
-
-def logpo(msg: str, data, priority: str = "info") -> None:
-    """
-    Converts any Python data type to a string and logs it with a specified priority.
-
-    Args:
-        msg: A str
-        data: The data to log. Can be any Python object.
-        priority (str): The priority level (info, warning, error, critical).
-                        Defaults to 'info'.
-
-    Raises:
-        ValueError: If the priority level is invalid in the underlying `log` function.
-    """
-    try:
-        message = msg + str(data)  # Convert the data to a string representation
-        log(message, priority)  # Call the original log function
-    except ValueError as e:
-        raise ValueError(f"Error in logging: {e}")
-
-def log(message: str, priority: str = "info") -> None:
-    """
-    Sends a message to the system log (syslog) with a specified priority.
-
-    Args:
-        message (str): The message to log.
-        priority (str): The priority level (info, warning, error, critical).
-                        Defaults to 'info'.
-
-    Raises:
-        ValueError: If the priority level is invalid.
-    """
-
-    syslog_level = {
-        "debug": syslog.LOG_DEBUG,
-        "info": syslog.LOG_INFO,
-        "warning": syslog.LOG_WARNING,
-        "error": syslog.LOG_ERR,
-        "critical": syslog.LOG_CRIT,
-    }
-
-    if priority not in syslog_level:
-        raise ValueError(f"Invalid priority level: {priority}. Valid options are {list(syslog_level.keys())}")
-    if MAX_LOG_LEVEL not in syslog_level:
-        raise ValueError(f"Invalid MIN_LOG_LEVEL: {MAX_LOG_LEVEL}. Valid options are {list(syslog_level.keys())}")
-
-    if syslog_level[priority] <= syslog_level[MAX_LOG_LEVEL]:
-        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_USER)
-        syslog.syslog(syslog_level[priority], message)
-        syslog.closelog()
 
 def get_meta():
     """
@@ -130,7 +80,7 @@ def get_meta():
         "nodename": nodename,                   # Nodename
         "ip_address": ip_address,               # Dirección IP local
         "agent_version": str(AGENT_VERSION),    # Versión del agente
-        "uuid": _uuid                            # ID único de la petición
+        "uuid": _uuid                           # ID único de la petición
     }
     
 def load_config(file_path):
@@ -202,7 +152,7 @@ def send_request(cmd="ping", data=None):
     """
     global config
 
-    # Datos básicos de configuración
+    # Get base config
     token = config["token"]
     id = config["id"]
     interval = config["interval"]
@@ -283,9 +233,13 @@ def validate_config(config):
 def main():
     global running        
     
-    last_load_avg = None
-    last_memory_info  = None
-    
+    datastore = Datastore()
+    event_processor = EventProcessor()
+     
+    # Send load 5m for stats every 5m
+    last_loadavg_stats_sent = 0   
+
+  
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
     config = load_config(CONFIG_FILE_PATH)
@@ -302,7 +256,7 @@ def main():
     token = config["token"]
     config["interval"] = config["default_interval"]
 
-    # Configurar manejo de senales
+    # Signal Handle
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
@@ -310,20 +264,38 @@ def main():
         extra_data = {}
         current_load_avg = info_linux.get_load_avg()
         current_memory_info = info_linux.get_memory_info()
-
-        if current_load_avg != last_load_avg:
-            last_load_avg = current_load_avg
+        current_disk_info = info_linux.get_disks_info()
+        
+        current_time = time.time() 
+        
+        # Check and update load average
+        if current_load_avg != datastore.get_data("last_load_avg"):
+            datastore.update_data("last_load_avg", current_load_avg)
             extra_data.update(current_load_avg)
         
-        if (current_memory_info != last_memory_info):
-            last_memory_info = current_memory_info
+        # Send 5-minute load average stats
+        if (current_time - last_loadavg_stats_sent) > (5 * 60):
+            extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
+            last_loadavg_stats_sent = current_time                
+        
+        # Check and update memory info
+        if current_memory_info != datastore.get_data("last_memory_info"):
+            datastore.update_data("last_memory_info", current_memory_info)
             extra_data.update(current_memory_info)
-
+        
+        # Check and update disk info
+        if current_disk_info != datastore.get_data("last_disk_info"):
+            datastore.update_data("last_disk_info", current_disk_info)
+            extra_data.update(current_disk_info)
 
         log("Sending ping to server. " + str(AGENT_VERSION), "debug")
         response = send_request(cmd="ping", data=extra_data)
 
-
+        events = event_processor.process_changes(datastore)
+        for event in events:
+            logpo("Sending event:", event, "debug")
+            send_notification("event", event)
+                    
         if response:
             valid_response = validate_response(response, token)
             if valid_response:
@@ -339,7 +311,10 @@ def main():
                         config["interval"] = config["default_interval"]
             else:
                 log("Invalid response receive", "warning")
-        log(f"Sleeping for {config['interval']} seconds", "debug")                
+        
+        end_time = time.time()
+        duration = end_time - current_time
+        log(f"Tiempo bucle {duration:.2f} + Sleeping {config['interval']} (segundos).", "debug")              
         time.sleep(config["interval"])
 
 if __name__ == "__main__":

@@ -4,11 +4,11 @@ from typing import List, Dict, Any
 from log_linux import log, logpo
 
 class EventProcessor:
-    def __init__(self, cpu_threshold: float = 80.0, event_expiration: int = 43200):
+    def __init__(self, cpu_threshold: float = 80.0, event_expiration: int = 300):
         """
         Inicializa el procesador de eventos.
         :param cpu_threshold: Umbral para el uso de CPU.
-        :param event_expiration: Tiempo en segundos después del cual un evento puede reenviarse. default 12h
+        :param event_expiration: Tiempo en segundos después del cual un evento puede reenviarse.
         """
         self.processed_events: Dict[str, float] = {}  # Diccionario de eventos procesados con marca de tiempo
         self.cpu_threshold = cpu_threshold
