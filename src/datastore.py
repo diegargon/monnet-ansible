@@ -11,7 +11,6 @@ class Datastore:
             "last_load_avg": None,
             "last_memory_info": None,
             "last_disk_info": None,
-            "last_iowait": 0,
         }
 
     def update_data(self, key: str, data: Dict[str, Any]):
