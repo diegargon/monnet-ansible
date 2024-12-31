@@ -10,28 +10,17 @@ class EventProcessor:
         :param cpu_threshold: Umbral para el uso de CPU.
         :param event_expiration: Tiempo en segundos después del cual un evento puede reenviarse.
         """
-         # Dict  processed events with time stamp
-        self.processed_events: Dict[str, float] = {} 
+        self.processed_events: Dict[str, float] = {}  # Diccionario de eventos procesados con marca de tiempo
         self.cpu_threshold = cpu_threshold
         self.event_expiration = event_expiration
 
     def process_changes(self, datastore) -> List[Dict[str, Any]]:
         """
-        Procesa los cambios en los datos del Datastore
+        Procesa los cambios en los datos del Datastore según reglas predefinidas.
         Devuelve una lista de eventos que no hayan sido enviados recientemente o hayan expirado.
         """
         events = []
         current_time = time.time()
-        # Event > Iowait threshold
-        iowait = datastore.get_data("last_iowait")
-        if iowait > 0.8:
-            event_id = "high_io_delay"
-            if self._should_send_event(event_id, current_time):
-                events.append({
-                    "name": "high_iowait",
-                    "data": {"iowait": iowait}
-                })
-                self._mark_event(event_id, current_time)
 
         # Event: > CPU threshold
         load_avg = datastore.get_data("last_load_avg")
@@ -42,7 +31,7 @@ class EventProcessor:
                 event_id = "high_cpu_usage"
                 if self._should_send_event(event_id, current_time):
                     events.append({
-                        "name": "high_cpu_usage",
+                        "event": "high_cpu_usage",
                         "data": {"cpu_usage": loadavg_data["usage"]}
                     })
                     self._mark_event(event_id, current_time)
@@ -57,7 +46,7 @@ class EventProcessor:
                     event_id = "high_memory_usage"
                     if self._should_send_event(event_id, current_time):
                         events.append({
-                            "name": "high_memory_usage",
+                            "event": "high_memory_usage",
                             "data": {"memory_usage": meminfo_data}
                         })
                         self._mark_event(event_id, current_time)
@@ -72,13 +61,13 @@ class EventProcessor:
                             event_id = f"high_disk_usage_{stats.get('device', 'unknown')}"
                             if self._should_send_event(event_id, current_time):
                                 events.append({
-                                    "name": "high_disk_usage",
+                                    "event": "high_disk_usage",
                                     "data": stats
                                 })
                                 self._mark_event(event_id, current_time)
         else:
             log(f"Unexpected structure in disk info: {type(disk_info)} -> {disk_info}", "error")
-        # Cleanup processed_events
+        # Limitar el tamaño de processed_events para evitar crecimiento indefinido
         self._cleanup_events(current_time)
 
         return events
