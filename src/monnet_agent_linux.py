@@ -35,6 +35,7 @@ Response Structure Documentation
     'data': list             # List of data, typically empty in this case. Example: []
 }    
 """
+import os
 import ssl
 import time
 import json
@@ -58,7 +59,7 @@ from event_processor import EventProcessor
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.69"
+AGENT_VERSION = "0.73"
 running = True
 
 def get_meta():
@@ -76,17 +77,17 @@ def get_meta():
     _uuid = str(uuid.uuid4())
 
     return {
-        "timestamp": timestamp,                 # Timestamp en UTC
-        "timezone": str(local_timezone),        # Zona horaria local
-        "hostname": hostname,                   # Nombre del host
-        "nodename": nodename,                   # Nodename
-        "ip_address": ip_address,               # Dirección IP local
-        "agent_version": str(AGENT_VERSION),    # Versión del agente
-        "uuid": _uuid                           # ID único de la petición
+        "timestamp": timestamp,                 # Timestamp  UTC
+        "timezone": str(local_timezone),        # Timezone
+        "hostname": hostname,                   
+        "nodename": nodename,                   
+        "ip_address": ip_address,               
+        "agent_version": str(AGENT_VERSION),    
+        "uuid": _uuid                           # ID uniq
     }
     
 def load_config(file_path):
-    """Carga la configuracion desde un archivo JSON."""
+    """Load JSON config"""
     try:
         with open(file_path, "r") as file:
             config = json.load(file)
@@ -102,8 +103,11 @@ def load_config(file_path):
         log(f"Error loading configuration: {e}", "error")
         return None
 
-def send_notification(type, msg):
-    """Send notification to server. No response"""
+""" 
+    Send notification to server. No response 
+    
+"""
+def send_notification(name, data):
     global config
     
     token = config["token"]
@@ -112,9 +116,10 @@ def send_notification(type, msg):
     server_host = config["server_host"]
     server_endpoint = config["server_endpoint"]
     meta = get_meta()
-    if type == 'starting':
-        msg = msg.strftime("%H:%M:%S")
-
+    if name == 'starting':
+        data["msg"] = data["msg"].strftime("%H:%M:%S")
+    data["name"] = name
+    
     payload = {
         "id": id,
         "cmd": "notification",
@@ -205,18 +210,42 @@ def send_request(cmd="ping", data=None):
     return None
 
 def validate_response(response, token):
-    """Valida la respuesta recibida."""
+    """ Basic response validation """
     if response and response.get("cmd") == "pong" and response.get("token") == token:
         return response
     log("Invalid response or wrong token.", "warning")
     return None
 
 def handle_signal(signum, frame):
-    """Maneja las senales de inicio y detencion del daemon."""
+    """ Signal Handler """
     global running
-    if signum in (signal.SIGINT, signal.SIGTERM):
-        log("Signal finish receive. Stopping app...", "info")
-        running = False
+    global config
+    
+    signal_name = None
+    msg = None
+    notification_type = "shutdown"
+    
+    if signum == signal.SIGTERM:
+        signal_name = 'SIGTERM'
+    elif signum == signal.SIGHUP:
+        signal_name = 'SIGHUP'
+    else:
+        signal_name = signum
+    
+    if os.path.exists("/run/systemd/shutdown"):
+        with open("/run/systemd/shutdown", "r") as f:
+            shutdown_info = f.read()
+            msg = "System shutdown: " + shutdown_info            
+            notification_type = "system_shutdown"
+    else:
+        msg = "Signal receive: {signal_name}. Closing application."
+        
+    log(f"Receive Signal {signal_name}  Stopping app...", "notice")
+    
+    data = {"msg": msg}                    
+    send_notification(notification_type, data)
+
+    running = False
 
 def validate_config(config):
     """
@@ -237,12 +266,13 @@ def main():
     
     datastore = Datastore()
     event_processor = EventProcessor()
-     
+    # Stats Interval 5m
+    stats_interval = (5 * 60)     
+    
     # Send load_avg['5m'] for stats every 5m    
-    last_loadavg_stats_sent = 0   
+    last_stats_sent = 0   
     # Used for iowait
     last_cpu_times = psutil.cpu_times()
-    last_iowait = 0
   
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
@@ -271,16 +301,11 @@ def main():
         current_disk_info = info_linux.get_disks_info()
         
         current_time = time.time() 
-        
+                           
         # Check and update load average
         if current_load_avg != datastore.get_data("last_load_avg"):
             datastore.update_data("last_load_avg", current_load_avg)
-            extra_data.update(current_load_avg)
-        
-        # Send 5-minute load average stats
-        if (current_time - last_loadavg_stats_sent) > (5 * 60):
-            extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
-            last_loadavg_stats_sent = current_time                
+            extra_data.update(current_load_avg)               
         
         # Check and update memory info
         if current_memory_info != datastore.get_data("last_memory_info"):
@@ -296,19 +321,24 @@ def main():
         current_cpu_times = psutil.cpu_times()
         current_iowait = info_linux.get_iowait(last_cpu_times, current_cpu_times)
         current_iowait = round(current_iowait, 2)
-        if (current_iowait != last_iowait):
-            extra_data.update({'iowait': current_iowait})
-            last_iowait = current_iowait
+        if current_iowait != datastore.get_data("last_iowait"):            
+            datastore.update_data("last_iowait", current_iowait)
+            extra_data.update({'iowait': current_iowait})            
         last_cpu_times = current_cpu_times
         
-            
+        # Send stats ever stats interval
+        if (current_time - last_stats_sent) > stats_interval:
+            extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
+            extra_data["iowait_stats"] = current_iowait
+            last_stats_sent = current_time
+                        
         log("Sending ping to server. " + str(AGENT_VERSION), "debug")
         response = send_request(cmd="ping", data=extra_data)
 
         events = event_processor.process_changes(datastore)
         for event in events:
             logpo("Sending event:", event, "debug")
-            send_notification("event", event)
+            send_notification(event["name"], event["data"])
                     
         if response:
             valid_response = validate_response(response, token)
