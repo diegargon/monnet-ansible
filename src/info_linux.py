@@ -123,8 +123,8 @@ def read_cpu_stats():
 
 def get_iowait(last_cpu_times, current_cpu_times):
     """
-    Calcula la media de IO Wait desde la última llamada.
-    :return: Porcentaje de IO Wait desde la última medición.
+    Io wait/delay calculation
+    :return: Percent IO Wait within call median
                      
     """
 
