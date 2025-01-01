@@ -1,4 +1,11 @@
 import os
+import socket
+import time
+import psutil
+
+def bytes_to_mb(bytes_value):
+    """
+    bytes to megabytes.
 
 import socket
 
@@ -103,3 +110,39 @@ def cpu_usage(cpu_load):
     cpu_usage_percentage = (cpu_load / total_cpus) * 100
 
     return round(cpu_usage_percentage, 2)    
+
+def read_cpu_stats():
+    """ CPU Stats from /proc/stat."""
+    with open("/proc/stat", "r") as f:
+        for line in f:
+            if line.startswith("cpu "):
+                parts = line.split()
+                user, nice, system, idle, iowait = map(int, parts[1:6])
+                return user, nice, system, idle, iowait
+    return None
+
+def get_iowait(last_cpu_times, current_cpu_times):
+    """
+    Calcula la media de IO Wait desde la última llamada.
+    :return: Porcentaje de IO Wait desde la última medición.
+                     
+    """
+
+    # Calcular diferencias acumulativas
+    user_diff = current_cpu_times.user - last_cpu_times.user
+    nice_diff = current_cpu_times.nice - last_cpu_times.nice
+    system_diff = current_cpu_times.system - last_cpu_times.system
+    idle_diff = current_cpu_times.idle - last_cpu_times.idle
+    iowait_diff = (current_cpu_times.iowait - last_cpu_times.iowait) if hasattr(current_cpu_times, 'iowait') else 0
+
+    # Suma total de diferencias
+    total_diff = user_diff + nice_diff + system_diff + idle_diff + iowait_diff
+
+    # Actualizar el estado anterior
+    last_cpu_times = current_cpu_times
+
+    # Calcular el porcentaje de IO Wait
+    if total_diff > 0:
+        return (iowait_diff / total_diff) * 100
+
+    return 0 
