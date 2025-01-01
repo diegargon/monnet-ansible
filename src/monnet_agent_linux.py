@@ -41,6 +41,8 @@ import json
 import signal
 import uuid
 import time
+import psutil
+
 from pathlib import Path
 from datetime import datetime
 import http.client
@@ -56,7 +58,7 @@ from event_processor import EventProcessor
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.65"
+AGENT_VERSION = "0.69"
 running = True
 
 def get_meta():
@@ -236,9 +238,11 @@ def main():
     datastore = Datastore()
     event_processor = EventProcessor()
      
-    # Send load 5m for stats every 5m
+    # Send load_avg['5m'] for stats every 5m    
     last_loadavg_stats_sent = 0   
-
+    # Used for iowait
+    last_cpu_times = psutil.cpu_times()
+    last_iowait = 0
   
     log("Init monnet linux agent", "info")
     # Cargar la configuracion desde el archivo
@@ -288,6 +292,16 @@ def main():
             datastore.update_data("last_disk_info", current_disk_info)
             extra_data.update(current_disk_info)
 
+        # Get IOwait
+        current_cpu_times = psutil.cpu_times()
+        current_iowait = info_linux.get_iowait(last_cpu_times, current_cpu_times)
+        current_iowait = round(current_iowait, 2)
+        if (current_iowait != last_iowait):
+            extra_data.update({'iowait': current_iowait})
+            last_iowait = current_iowait
+        last_cpu_times = current_cpu_times
+        
+            
         log("Sending ping to server. " + str(AGENT_VERSION), "debug")
         response = send_request(cmd="ping", data=extra_data)
 
