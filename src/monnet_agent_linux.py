@@ -54,12 +54,13 @@ import info_linux
 import time_utils
 from datastore import Datastore
 from event_processor import EventProcessor
+from agent_config import load_config, update_config
 
 # Config file
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.73"
+AGENT_VERSION = "0.75"
 running = True
 config = None
 
@@ -87,23 +88,6 @@ def get_meta():
         "uuid": _uuid                           # ID uniq
     }
     
-def load_config(file_path):
-    """Load JSON config"""
-    try:
-        with open(file_path, "r") as file:
-            config = json.load(file)
-            return {
-                "id": config.get("id"),
-                "token": config.get("token"),
-                "default_interval": config.get("default_interval", 10),
-                "ignore_cert": config.get("ignore_cert", True),
-                "server_host": config.get("server_host", "localhost"),
-                "server_endpoint": config.get("server_endpoint", "/")
-            }
-    except Exception as e:
-        log(f"Error loading configuration: {e}", "err")
-        return None
-
 """ 
     Send notification to server. No response 
     
