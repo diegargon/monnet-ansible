@@ -8,5 +8,5 @@
 
     - name: Mostrar particiones reales
       debug:
-        msg: "{{ item }}"
-      with_items: "{{ df_output.stdout_lines | select('search', '^/dev/') | list }}"
+        msg: "{{ df_output.stdout_lines }}"
+
