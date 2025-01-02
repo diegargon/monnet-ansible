@@ -1,7 +1,10 @@
 import os
 import socket
-import time
-import psutil
+import subprocess
+import re
+from collections import defaultdict
+# LOCAL
+from log_linux import log, logpo
 
 def bytes_to_mb(bytes_value):
     """
@@ -146,3 +149,64 @@ def get_iowait(last_cpu_times, current_cpu_times):
         return (iowait_diff / total_diff) * 100
 
     return 0 
+
+def get_ports_grouped():
+    """
+    Fetch active connections using `ss` and group them by IPv4 and IPv6, then by IPs, ports, and services.
+    """
+    
+    """ Declaracion para que cree el arbol de keys si no existe asi no hay que comprobar si existe """
+    grouped_data = {
+        'ports_info': {
+            'ipv4': defaultdict(lambda: defaultdict(list)),
+            'ipv6': defaultdict(lambda: defaultdict(list))
+        }
+    }
+
+    try:
+        # Run `ss` command to list listening sockets (both TCP and UDP)
+        output = subprocess.check_output(['ss', '-tulnp'], text=True).splitlines()
+
+        # Regex to parse `ss` output lines
+        ss_regex = re.compile(r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+(?P<local_address>[^:]+|\*)\:(?P<port>\d+)\s+[^:]+:\*\s+users:\(\((?P<service>.+?),pid=(?P<pid>\d+),fd=\d+\)\)')
+
+        for line in output:
+            match = ss_regex.search(line)
+            if match:
+                local_address = match.group('local_address')
+                port = int(match.group('port'))
+                service = match.group('service')
+
+                # Determine protocol context
+                if local_address == '*':
+                    # Treat `*` as both IPv4 and IPv6
+                    grouped_data['ports_info']['ipv4']['0.0.0.0'][port].append(service)
+                    grouped_data['ports_info']['ipv6']['[::]'][port].append(service)
+                elif ":" in local_address:
+                    protocol = 'ipv6'
+                    grouped_data['ports_info'][protocol][local_address][port].append(service)
+                else:
+                    protocol = 'ipv4'
+                    grouped_data['ports_info'][protocol][local_address][port].append(service)
+
+    except subprocess.CalledProcessError as e:
+        log(f"Error executing ss command: {e}")
+    except Exception as ex:
+        log(f"An unexpected error occurred: {ex}")
+
+    return grouped_data
+
+
+def is_system_shutting_down():
+    """ Detecta si se esta apagando el sistema """
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-system-running"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip() == "stopping"
+    except subprocess.CalledProcessError as e:
+        log(f"Error ejecutando el comando: {e}")
+        return False

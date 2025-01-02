@@ -60,7 +60,7 @@ from agent_config import load_config, update_config
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.75"
+AGENT_VERSION = "0.81"
 running = True
 config = None
 
@@ -208,8 +208,7 @@ def handle_signal(signum, frame):
     
     signal_name = None
     msg = None
-    notification_type = "shutdown"
-    
+        
     if signum == signal.SIGTERM:
         signal_name = 'SIGTERM'
     elif signum == signal.SIGHUP:
@@ -217,13 +216,12 @@ def handle_signal(signum, frame):
     else:
         signal_name = signum
     
-    if os.path.exists("/run/systemd/shutdown"):
-        with open("/run/systemd/shutdown", "r") as f:
-            shutdown_info = f.read()
-            msg = "System shutdown: " + shutdown_info            
-            notification_type = "system_shutdown"
+    if info_linux.is_system_shutting_down():
+        notification_type = "system_shutdown"         
+        msg = "System shutdown or reboot"        
     else:
-        msg = "Signal receive: {signal_name}. Closing application."
+        notification_type = "app_shutdown"
+        msg = f"Signal receive: {signal_name}. Closing application."
         
     log(f"Receive Signal {signal_name}  Stopping app...", "notice")
     
@@ -291,8 +289,9 @@ def main():
         extra_data = {}
         current_load_avg = info_linux.get_load_avg()
         current_memory_info = info_linux.get_memory_info()
-        current_disk_info = info_linux.get_disks_info()
-        
+        current_disk_info = info_linux.get_disks_info()        
+        current_ports_info = info_linux.get_ports_grouped()
+
         current_time = time.time() 
                            
         # Check and update load average
@@ -309,6 +308,10 @@ def main():
         if current_disk_info != datastore.get_data("last_disk_info"):
             datastore.update_data("last_disk_info", current_disk_info)
             extra_data.update(current_disk_info)
+
+        if current_ports_info != datastore.get_data("last_ports_info"):
+            datastore.update_data("last_ports_info", current_ports_info)
+            #extra_data.update(current_disk_info)
 
         # Get IOwait
         current_cpu_times = psutil.cpu_times()
