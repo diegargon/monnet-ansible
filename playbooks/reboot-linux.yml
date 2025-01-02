@@ -1,6 +1,6 @@
 - name: Reboot a Linux system
   hosts: all
-  become: yes
+  become: true
   gather_facts: false
   tasks:
     - name: Reboot the system
