@@ -1,5 +1,0 @@
-- name: Get uptime facts from all hosts
-  hosts: all
-  tasks:
-    - name: Gather uptime facts
-      ansible.builtin.uptime:

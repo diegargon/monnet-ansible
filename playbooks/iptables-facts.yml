@@ -1,5 +1,7 @@
 - name: Gather iptables facts
   hosts: all
+  become: true
+  gather_facts: false
   tasks:
     - name: Get iptables facts
       iptables_facts:

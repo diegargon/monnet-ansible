@@ -1,6 +1,6 @@
 - name: Ensure MySQL is running and check database locks
   hosts: all
-  become: yes
+  become: true
   gather_facts: false
 
   vars:

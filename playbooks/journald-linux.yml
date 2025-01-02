@@ -1,7 +1,7 @@
 - name: Get the last lines from the system journal
   hosts: all
   gather_facts: false
-  become: yes
+  become: true
 
   tasks:
     - name: Get the last 10 lines of the system journal
