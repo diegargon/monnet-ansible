@@ -168,26 +168,32 @@ def get_ports_grouped():
         output = subprocess.check_output(['ss', '-tulnp'], text=True).splitlines()
 
         # Regex to parse `ss` output lines
-        ss_regex = re.compile(r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+(?P<local_address>[^:]+|\*)\:(?P<port>\d+)\s+[^:]+:\*\s+users:\(\((?P<service>.+?),pid=(?P<pid>\d+),fd=\d+\)\)')
+        ss_regex = re.compile(r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+(?P<local_address>[^:]+|\*)\:(?P<port>\d+)\s+[^:]+:\*\s+users:\(\((?P<service>.+?)\)\)')
 
         for line in output:
             match = ss_regex.search(line)
             if match:
                 local_address = match.group('local_address')
                 port = int(match.group('port'))
-                service = match.group('service')
+
+                # Extract all services (multiple possible)
+                services_raw = match.group('service')
+                services = re.findall(r'"([^"]+)"', services_raw)
 
                 # Determine protocol context
                 if local_address == '*':
                     # Treat `*` as both IPv4 and IPv6
-                    grouped_data['ports_info']['ipv4']['0.0.0.0'][port].append(service)
-                    grouped_data['ports_info']['ipv6']['[::]'][port].append(service)
+                    for service in services:
+                        grouped_data['ports_info']['ipv4']['0.0.0.0'][port].append(service)
+                        grouped_data['ports_info']['ipv6']['[::]'][port].append(service)
                 elif ":" in local_address:
                     protocol = 'ipv6'
-                    grouped_data['ports_info'][protocol][local_address][port].append(service)
+                    for service in services:
+                        grouped_data['ports_info'][protocol][local_address][port].append(service)
                 else:
                     protocol = 'ipv4'
-                    grouped_data['ports_info'][protocol][local_address][port].append(service)
+                    for service in services:
+                        grouped_data['ports_info'][protocol][local_address][port].append(service)
 
     except subprocess.CalledProcessError as e:
         log(f"Error executing ss command: {e}")
