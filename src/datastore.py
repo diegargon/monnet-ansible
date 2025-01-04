@@ -22,6 +22,8 @@ class Datastore:
         if key not in self.data:
             log(f"New data set added: {key}")
         self.data[key] = data
+        # TODO save on exit or each X time
+        self.save_data()
 
     def get_data(self, key: str) -> Optional[Dict[str, Any]]:
         """

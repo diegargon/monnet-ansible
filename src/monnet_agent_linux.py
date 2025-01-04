@@ -35,16 +35,15 @@ Response Structure Documentation
     'data': list             # List of data, typically empty in this case. Example: []
 }    
 """
-import os
+
 import ssl
+import sys
 import time
 import json
 import signal
 import uuid
 import time
 import psutil
-
-from pathlib import Path
 from datetime import datetime
 import http.client
 
@@ -62,7 +61,7 @@ import tasks
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.97"
+AGENT_VERSION = "0.99"
 running = True
 config = None
 
@@ -239,9 +238,9 @@ def handle_signal(signum, frame):
     log(f"Receive Signal {signal_name}  Stopping app...", "notice")
     
     data = {"msg": msg}                    
-    send_notification(notification_type, data)
-
+    send_notification(notification_type, data)    
     running = False
+    sys.exit(0)
 
 def validate_config():
     """
@@ -303,14 +302,16 @@ def main():
     }
     send_notification('starting', starting_data)
     
-    tasks.check_ports(datastore, send_notification)
+    # Timer function
+    tasks.check_listen_ports(datastore, send_notification)
     
     while running:
         extra_data = {}
         current_load_avg = info_linux.get_load_avg()
         current_memory_info = info_linux.get_memory_info()
-        current_disk_info = info_linux.get_disks_info()
-        
+        current_disk_info = info_linux.get_disks_info()        
+#        current_ports_info = info_linux.get_ports_grouped()
+
         current_time = time.time() 
                            
         # Check and update load average
