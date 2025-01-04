@@ -1,7 +1,15 @@
 import os
 import socket
-import time
-import psutil
+import subprocess
+import re
+import subprocess
+import re
+import json
+
+#from collections import defaultdict
+
+# LOCAL
+from log_linux import log, logpo
 
 def bytes_to_mb(bytes_value):
     """
@@ -158,18 +166,13 @@ def get_iowait(last_cpu_times, current_cpu_times):
 
     return 0 
 
-def get_ports_grouped():
+
+def get_listen_ports_info():
     """
-    Fetch active connections using `ss` and group them by IPv4 and IPv6, then by IPs, ports, and services.
+    Fetch active connections using `ss` and return a flattened list of port details.
     """
-    
-    """ Declaracion para que cree el arbol de keys si no existe asi no hay que comprobar si existe """
-    grouped_data = {
-        'ports_info': {
-            'ipv4': defaultdict(lambda: defaultdict(list)),
-            'ipv6': defaultdict(lambda: defaultdict(list))
-        }
-    }
+    # Lista para almacenar los resultados planos
+    ports_flattened = []
 
     try:
         # Run `ss` command to list listening sockets (both TCP and UDP)
@@ -188,27 +191,27 @@ def get_ports_grouped():
                 services_raw = match.group('service')
                 services = re.findall(r'"([^"]+)"', services_raw)
 
-                # Determine protocol context
-                if local_address == '*':
-                    # Treat `*` as both IPv4 and IPv6
-                    for service in services:
-                        grouped_data['ports_info']['ipv4']['0.0.0.0'][port].append(service)
-                        grouped_data['ports_info']['ipv6']['[::]'][port].append(service)
-                elif ":" in local_address:
-                    protocol = 'ipv6'
-                    for service in services:
-                        grouped_data['ports_info'][protocol][local_address][port].append(service)
-                else:
-                    protocol = 'ipv4'
-                    for service in services:
-                        grouped_data['ports_info'][protocol][local_address][port].append(service)
+                # Determine protocol (TCP/UDP)
+                protocol = 'tcp' if 'tcp' in line else 'udp'
+
+                # Determine if IPv4 or IPv6
+                ip_version = 'ipv6' if ':' in local_address else 'ipv4'
+
+                # Add results for each service
+                for service in services:
+                    if local_address == '*':
+                        # Handle wildcard address for both IPv4 and IPv6
+                        ports_flattened.append({'interface': '0.0.0.0', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv4'})
+                        ports_flattened.append({'interface': '[::]', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv6'})
+                    else:
+                        ports_flattened.append({'interface': local_address, 'port': port, 'service': service, 'protocol': protocol, 'ip_version': ip_version})
 
     except subprocess.CalledProcessError as e:
-        log(f"Error executing ss command: {e}")
+        print(f"Error executing ss command: {e}")
     except Exception as ex:
-        log(f"An unexpected error occurred: {ex}")
+        print(f"An unexpected error occurred: {ex}")
 
-    return grouped_data
+    return ports_flattened
 
 
 def is_system_shutting_down():
