@@ -49,18 +49,20 @@ from datetime import datetime
 import http.client
 
 # Local
+import globals
 from log_linux import log, logpo
 import info_linux
 import time_utils
 from datastore import Datastore
 from event_processor import EventProcessor
 from agent_config import load_config, update_config
+import tasks
 
 # Config file
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.75"
+AGENT_VERSION = "0.97"
 running = True
 config = None
 
@@ -88,13 +90,14 @@ def get_meta():
         "uuid": _uuid                           # ID uniq
     }
     
+       
 """ 
     Send notification to server. No response 
     
 """
 def send_notification(name, data):
     global config
-        
+       
     token = config["token"]
     id = config["id"]
     ignore_cert = config["ignore_cert"]
@@ -126,6 +129,13 @@ def send_notification(name, data):
     except Exception as e:
         log(f"Error sending notification: {e}", "err")
     finally:
+        """ 
+            We dont want keep that key due interference with dict comparation current/last 
+            TODO: find a safe way 
+            WARNING: No modify the data here of something that going to have a comporation
+        """
+        if "name" in data:
+            data.pop("name")        
         connection.close()
         
 def send_request(cmd="ping", data=None):
@@ -204,9 +214,13 @@ def handle_signal(signum, frame):
     global config
     
     signal_name = None
-    msg = None
-    notification_type = "shutdown"
-    
+    msg = None       
+
+    for name, timer in globals.timers.items():
+        log(f"Cancelando timer: {name}")
+        timer.cancel()
+    globals.timers.clear()
+
     if signum == signal.SIGTERM:
         signal_name = 'SIGTERM'
     elif signum == signal.SIGHUP:
@@ -289,6 +303,8 @@ def main():
     }
     send_notification('starting', starting_data)
     
+    tasks.check_ports(datastore, send_notification)
+    
     while running:
         extra_data = {}
         current_load_avg = info_linux.get_load_avg()
@@ -311,7 +327,7 @@ def main():
         if current_disk_info != datastore.get_data("last_disk_info"):
             datastore.update_data("last_disk_info", current_disk_info)
             extra_data.update(current_disk_info)
-
+        
         # Get IOwait
         current_cpu_times = psutil.cpu_times()
         current_iowait = info_linux.get_iowait(last_cpu_times, current_cpu_times)
