@@ -61,7 +61,7 @@ import tasks
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.99"
+AGENT_VERSION = "0.100"
 running = True
 config = None
 

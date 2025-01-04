@@ -200,7 +200,7 @@ def get_listen_ports_info():
     except Exception as ex:
         print(f"An unexpected error occurred: {ex}")
 
-    return ports_flattened
+    return {"listen_ports_info": ports_flattened}
 
 
 def is_system_shutting_down():
