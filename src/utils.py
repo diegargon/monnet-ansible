@@ -4,10 +4,9 @@
 
 """
 import json
-#from collections import defaultdict
+from collections import defaultdict
 from log_linux import log, logpo
 
-"""
 def normalize(data):
     if isinstance(data, defaultdict):
         return {k: normalize(v) for k, v in data.items()}
@@ -21,7 +20,6 @@ def normalize(data):
         return data
     else:
         return str(data)
-"""
     
 """ NOT USED """    
 def are_equal(obj1, obj2):
