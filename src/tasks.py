@@ -17,6 +17,9 @@ def check_listen_ports(datastore, notify_callback):
     if (current_listen_ports_info != last_listen_ports_info):        
         datastore.update_data("last_listen_ports_info", current_listen_ports_info)
         notify_callback("listen_ports_info", current_listen_ports_info)  # Notificar
+    #else : #debug
+    #    notify_callback("listen_ports_info", current_listen_ports_info)  # Notificar
+
     globals.timers['check_ports']  = threading.Timer(15, check_listen_ports, args=(datastore, notify_callback))
     globals.timers['check_ports'].start()
         
