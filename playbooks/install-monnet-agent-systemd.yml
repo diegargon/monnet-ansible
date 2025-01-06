@@ -1,4 +1,4 @@
-- name: Install Monnet Agent on Linux
+- name: Install Monnet Agent on systemd
   hosts: all
   become: true
   gather_facts: false
@@ -8,6 +8,36 @@
       debug:
         msg: "{{ agent_config }}"    
 
+    - name: Gather OS family
+      ansible.builtin.setup:
+        filter: ansible_os_family
+
+    - name: Print OS family with a message
+      ansible.builtin.debug:
+        msg: "The OS family of this host is: {{ ansible_os_family }}"
+
+    - name: Install psutils on Debian-based systems
+      ansible.builtin.package:
+        name: python3-psutil
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install psutils on RedHat-based systems
+      ansible.builtin.package:
+        name: python3-psutil
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Warn if OS family is not recognized
+      ansible.builtin.debug:
+        msg: "Warning: Unsupported OS family detected: {{ ansible_facts['os_family'] }}. Skipping installation."
+      when: ansible_facts['os_family'] not in ["Debian", "RedHat"]
+
+    - name: Warn if OS family could not be detected
+      ansible.builtin.debug:
+        msg: "Warning: OS family could not be detected. Skipping installation."
+      when: ansible_facts['os_family'] is undefined
+      
     - name: Ensure that agent_config exists
       assert:
         that:

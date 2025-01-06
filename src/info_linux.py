@@ -43,13 +43,23 @@ def get_memory_info():
             key, value = line.split(":")
             meminfo[key.strip()] = int(value.split()[0]) * 1024  # Convertir a bytes
 
+    total = meminfo.get("MemTotal", 0)
+    available = meminfo.get("MemAvailable", 0)
+    free = meminfo.get("MemFree", 0)
+    cached = meminfo.get("Cached", 0)
+    buffers = meminfo.get("Buffers", 0)
+    used = total - available
+    cache_used = cached + buffers
+
     return {
         "meminfo": {
-            "total": meminfo.get("MemTotal", 0),
-            "available": meminfo.get("MemAvailable", 0),
-            "free": meminfo.get("MemFree", 0),
-            "used": meminfo.get("MemTotal", 0) - meminfo.get("MemFree", 0),
-            "percent": round((meminfo.get("MemTotal", 0) - meminfo.get("MemFree", 0)) / meminfo.get("MemTotal", 1) * 100, 2),
+            "total": bytes_to_mb(total),
+            "available": bytes_to_mb(available),
+            "free": bytes_to_mb(free),
+            "used": bytes_to_mb(used),
+            "cache_used": bytes_to_mb(cache_used),
+            "cache_percent": round((cache_used / total) * 100, 2) if total > 0 else 0,            
+            "percent": round((used / total) * 100, 2) if total > 0 else 0
         }
     }
 
@@ -155,24 +165,25 @@ def get_iowait(last_cpu_times, current_cpu_times):
 
     return 0 
 
-
 def get_listen_ports_info():
     """
     Fetch active connections using `ss` and return a flattened list of port details.
     """
-    # Lista para almacenar los resultados planos
     ports_flattened = []
+    seen_ports = set()  # Avoid dup
 
     try:
         # Run `ss` command to list listening sockets (both TCP and UDP)
         output = subprocess.check_output(['ss', '-tulnp'], text=True).splitlines()
 
         # Regex to parse `ss` output lines
-        ss_regex = re.compile(r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+(?P<local_address>[^:]+|\*)\:(?P<port>\d+)\s+[^:]+:\*\s+users:\(\((?P<service>.+?)\)\)')
+        ss_regex = re.compile(r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+(?P<local_address>\[.*?\]|[^:\s]+|\*)\:(?P<port>\d+)\s+[^\s]+:\*\s+users:\(\((?P<service>.+?)\)\)')
 
         for line in output:
+            #log(f"Line {line}")
             match = ss_regex.search(line)
             if match:
+                #log(f"Match {match}")
                 local_address = match.group('local_address')
                 port = int(match.group('port'))
 
@@ -185,15 +196,28 @@ def get_listen_ports_info():
 
                 # Determine if IPv4 or IPv6
                 ip_version = 'ipv6' if ':' in local_address else 'ipv4'
-
-                # Add results for each service
+                #log(f"Local Address {local_address}")
                 for service in services:
+                    # Handle wildcard separately
                     if local_address == '*':
-                        # Handle wildcard address for both IPv4 and IPv6
-                        ports_flattened.append({'interface': '0.0.0.0', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv4'})
-                        ports_flattened.append({'interface': '[::]', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv6'})
+                        # Add IPv4 entry
+                        entry_ipv4 = ('0.0.0.0', port, service, protocol, 'ipv4')
+                        if entry_ipv4 not in seen_ports:
+                            ports_flattened.append({'interface': '0.0.0.0', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv4'})
+                            seen_ports.add(entry_ipv4)
+                            
+                    elif local_address == '[::]':
+                        # Add IPv6 entry
+                        entry_ipv6 = ('[::]', port, service, protocol, 'ipv6')
+                        if entry_ipv6 not in seen_ports:
+                            ports_flattened.append({'interface': '[::]', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv6'})
+                            seen_ports.add(entry_ipv6)
                     else:
-                        ports_flattened.append({'interface': local_address, 'port': port, 'service': service, 'protocol': protocol, 'ip_version': ip_version})
+                        # Add regular entry
+                        entry = (local_address, port, service, protocol, ip_version)
+                        if entry not in seen_ports:
+                            ports_flattened.append({'interface': local_address, 'port': port, 'service': service, 'protocol': protocol, 'ip_version': ip_version})
+                            seen_ports.add(entry)
 
     except subprocess.CalledProcessError as e:
         print(f"Error executing ss command: {e}")
@@ -201,7 +225,6 @@ def get_listen_ports_info():
         print(f"An unexpected error occurred: {ex}")
 
     return {"listen_ports_info": ports_flattened}
-
 
 def is_system_shutting_down():
     """ Detecta si se esta apagando el sistema """

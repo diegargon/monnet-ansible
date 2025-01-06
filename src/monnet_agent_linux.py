@@ -61,7 +61,7 @@ import tasks
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.100"
+AGENT_VERSION = "0.112"
 running = True
 config = None
 
@@ -230,17 +230,18 @@ def handle_signal(signum, frame):
     else:
         signal_name = signum
     
-    if os.path.exists("/run/systemd/shutdown"):
-        with open("/run/systemd/shutdown", "r") as f:
-            shutdown_info = f.read()
-            msg = "System shutdown: " + shutdown_info            
-            notification_type = "system_shutdown"
+    if info_linux.is_system_shutting_down():
+        notification_type = "system_shutdown"         
+        msg = "System shutdown or reboot"
+        event_type = globals.LT_EVENT_ALERT        
     else:
-        msg = "Signal receive: {signal_name}. Closing application."
+        notification_type = "app_shutdown"
+        msg = f"Signal receive: {signal_name}. Closing application."
+        event_type = globals.LT_EVENT_WARN    
         
     log(f"Receive Signal {signal_name}  Stopping app...", "notice")
     
-    data = {"msg": msg}                    
+    data = {"msg": msg, "event_type": event_type}                    
     send_notification(notification_type, data)    
     running = False
     sys.exit(0)
