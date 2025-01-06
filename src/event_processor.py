@@ -1,10 +1,11 @@
 import time
 from typing import List, Dict, Any
 # Local
+import globals
 from log_linux import log, logpo
 
 class EventProcessor:
-    def __init__(self, cpu_threshold: float = 80.0, event_expiration: int = 300):
+    def __init__(self, cpu_threshold: float = 90.0, event_expiration: int = 43200):
         """
         Inicializa el procesador de eventos.
         :param cpu_threshold: Umbral para el uso de CPU.
@@ -24,26 +25,42 @@ class EventProcessor:
         current_time = time.time()
         # Event > Iowait threshold
         iowait = datastore.get_data("last_iowait")
-        if iowait > 0.8:
+        if iowait  > globals.WARN_THRESHOLD:
             event_id = "high_io_delay"
-            if self._should_send_event(event_id, current_time):
+            if iowait > globals.ALERT_THRESHOLD :
+                event_type = globals.LT_EVENT_ALERT
+            else:
+                event_type = globals.LT_EVENT_WARN
+
+            if self._should_send_event(event_id, current_time) :
                 events.append({
                     "name": "high_iowait",
-                    "data": {"iowait": iowait}
+                    "data": {
+                        "iowait": iowait,
+                        "event_value": iowait,
+                        "event_type": event_type
+                        }
                 })
                 self._mark_event(event_id, current_time)
 
         # Event: > CPU threshold
         load_avg = datastore.get_data("last_load_avg")
         # logpo("Load avg", load_avg, "debug")
-        if load_avg and "loadavg" in load_avg:
+        if load_avg and "loadavg" in load_avg :
             loadavg_data = load_avg["loadavg"]
-            if loadavg_data.get("usage") is not None and loadavg_data.get("usage") > self.cpu_threshold:
+            if loadavg_data.get("usage") is not None and loadavg_data.get("usage") > globals.WARN_THRESHOLD :
+                if loadavg_data.get("usage") > globals.ALERT_THRESHOLD :
+                    event_type = globals.LT_EVENT_ALERT
+                else:
+                    event_type = globals.LT_EVENT_WARN                
                 event_id = "high_cpu_usage"
                 if self._should_send_event(event_id, current_time):
                     events.append({
                         "name": "high_cpu_usage",
-                        "data": {"cpu_usage": loadavg_data["usage"]}
+                        "data": {
+                            "cpu_usage": loadavg_data["usage"],
+                            "event_value": loadavg_data.get("usage"),
+                            "event_type": event_type}
                     })
                     self._mark_event(event_id, current_time)
 
@@ -52,30 +69,44 @@ class EventProcessor:
         # logpo("Memory info", memory_info, "debug")
         if memory_info and "meminfo" in memory_info:
             meminfo_data = memory_info["meminfo"]
-            if meminfo_data.get("used") is not None and meminfo_data.get("total", 1) > 0:
-                if meminfo_data["used"] / meminfo_data["total"] > 0.8: # threshold
-                    event_id = "high_memory_usage"
-                    if self._should_send_event(event_id, current_time):
-                        events.append({
-                            "name": "high_memory_usage",
-                            "data": {"memory_usage": meminfo_data}
-                        })
-                        self._mark_event(event_id, current_time)
+            if meminfo_data["percent"] > globals.WARN_THRESHOLD :
+                event_id = "high_memory_usage"
+                if meminfo_data["percent"] > globals.ALERT_THRESHOLD :
+                    event_type = globals.LT_EVENT_ALERT
+                else:
+                    event_type = globals.LT_EVENT_WARN                    
+                if self._should_send_event(event_id, current_time) :
+                    events.append({
+                        "name": "high_memory_usage",
+                        "data": {
+                            "memory_usage": meminfo_data,
+                            "event_value": meminfo_data["percent"],
+                            "event_type": event_type
+                            }
+                    })
+                    self._mark_event(event_id, current_time)
 
         # Evento: Disk threshold
         disk_info = datastore.get_data("last_disk_info")
         if isinstance(disk_info, dict) and "disksinfo" in disk_info:
             for stats in disk_info["disksinfo"]:
                 if isinstance(stats, dict): 
-                    if stats.get("used") is not None and stats.get("total", 0) > 0:
-                        if stats["used"] / stats["total"] > 0.9:  # threashold
-                            event_id = f"high_disk_usage_{stats.get('device', 'unknown')}"
-                            if self._should_send_event(event_id, current_time):
-                                events.append({
-                                    "name": "high_disk_usage",
-                                    "data": stats
-                                })
-                                self._mark_event(event_id, current_time)
+                    if stats.get("percent")  and stats["percent"] > globals.WARN_THRESHOLD :
+                        if stats["percent"] > globals.ALERT_THRESHOLD :
+                            event_type = globals.LT_EVENT_ALERT
+                        else:
+                            event_type = globals.LT_EVENT_WARN                                 
+                        event_id = f"high_disk_usage_{stats.get('device', 'unknown')}"
+                        if self._should_send_event(event_id, current_time):
+                            events.append({
+                                "name": "high_disk_usage",
+                                "data": { 
+                                    "disks_stats": stats,
+                                    "event_value": stats["percent"],
+                                    "event_type": event_type
+                                    }
+                            })
+                            self._mark_event(event_id, current_time)
         else:
             log(f"Unexpected structure in disk info: {type(disk_info)} -> {disk_info}", "error")
         # Cleanup processed_events
