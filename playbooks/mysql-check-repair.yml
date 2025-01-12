@@ -1,0 +1,78 @@
+- name: Check and optimize/repair all MySQL tables
+  hosts: all
+  gather_facts: false
+  become: true
+  vars:
+    ansible_python_interpreter: "/usr/bin/python3"
+    
+  tasks:
+
+    - name: Get list of all tables in the database
+      community.mysql.mysql_query:
+        login_host: "localhost"
+        login_user: "{{ db_username }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: "SHOW TABLES;"
+      register: tables_list
+
+    - name: Extract table names
+      set_fact:
+        tables: "{{ tables_list.query_result[0] | map(attribute='Tables_in_' + db_name) | list }}"
+
+    - name: Check MySQL tables status
+      community.mysql.mysql_query:
+        login_host: "localhost"
+        login_user: "{{ db_username }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: "CHECK TABLE {{ item }};"
+      loop: "{{ tables }}"
+      register: table_status
+
+    - name: Display table statuses
+      debug:
+        msg: >
+          Task: Check
+          Table: "{{ item.item }}"
+          Status: "{{ item.query_result[0][0]['Msg_text'] }}"
+      with_items: "{{ table_status.results }}"
+
+    - name: Optimize tables that need it
+      community.mysql.mysql_query:
+        login_host: "localhost"
+        login_user: "{{ db_username }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: "OPTIMIZE TABLE {{ item.item }};"
+      when: "'status' in item.query_result[0] and item.query_result[0].status != 'OK'"
+      loop: "{{ table_status.results }}"
+      register: optimize_results
+
+    - name: Repair tables that need it
+      community.mysql.mysql_query:
+        login_host: "localhost"
+        login_user: "{{ db_username }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: "REPAIR TABLE {{ item.item }};"
+      when: "'status' in item.query_result[0] and item.query_result[0].status not in ['OK', 'Table is already up to date']"
+      loop: "{{ table_status.results }}"
+      register: repair_results
+
+    - name: Display optimization results
+      debug:
+        msg: >
+          Task: Optimization
+          Status: "{{ item.item.query_result[0][0]['Msg_text'] }}"
+          Table: "{{ item.item.query_result[0][0]['Table'] }}"
+      with_items: "{{ optimize_results.results | default([]) }}"
+
+
+    - name: Display repair results
+      debug:
+        msg: >
+          Task: Repair
+          Status: "{{ item.item.query_result[0][0]['Msg_text'] }}"
+          Table: "{{ item.item.query_result[0][0]['Table'] }}"
+      with_items: "{{ repair_results.results | default([]) }}"

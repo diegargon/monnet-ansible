@@ -1,0 +1,82 @@
+- name: Install MySQL library based on Python version and OS family
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Debug OS family and Python version
+      debug:
+        msg:
+          - "Detected OS Family: {{ ansible_os_family }}"
+          - "Detected Python Major Version: {{ ansible_python.version.major }}"
+
+    - name: Ensure pip is installed for Python 3 on Debian-based systems
+      debug:
+        msg: "Installing python3-pip for Debian-based systems..."
+      when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu" and ansible_python.version.major == 3
+
+    - name: Install pip for Python 3 on Debian-based systems
+      package:
+        name: python3-pip
+        state: present
+      when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu" and ansible_python.version.major == 3
+      become: true
+
+    - name: Ensure pip is installed for Python 3 on RedHat-based systems
+      debug:
+        msg: "Installing python3-pip for RedHat-based systems..."
+      when: ansible_os_family == "RedHat" and ansible_python.version.major == 3
+
+    - name: Install pip for Python 3 on RedHat-based systems
+      package:
+        name: python3-pip
+        state: present
+      when: ansible_os_family == "RedHat" and ansible_python.version.major == 3
+      become: true
+
+    - name: Ensure pip is installed for Python 2 on Debian-based systems
+      debug:
+        msg: "Installing python-pip for Debian-based systems..."
+      when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu" and ansible_python.version.major == 2
+
+    - name: Install pip for Python 2 on Debian-based systems
+      package:
+        name: python-pip
+        state: present
+      when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu" and ansible_python.version.major == 2
+      become: true
+
+    - name: Ensure pip is installed for Python 2 on RedHat-based systems
+      debug:
+        msg: "Installing python2-pip for RedHat-based systems..."
+      when: ansible_os_family == "RedHat" and ansible_python.version.major == 2
+
+    - name: Install pip for Python 2 on RedHat-based systems
+      package:
+        name: python2-pip
+        state: present
+      when: ansible_os_family == "RedHat" and ansible_python.version.major == 2
+      become: true
+
+    - name: Install MySQL library for Python 3
+      debug:
+        msg: "Detected Python 3. Installing pymysql..."
+      when: ansible_python.version.major == 3
+
+    - name: Install pymysql for Python 3
+      pip:
+        name: pymysql
+        executable: pip3
+      when: ansible_python.version.major == 3
+      become: true
+
+    - name: Install MySQL library for Python 2
+      debug:
+        msg: "Detected Python 2. Installing MySQL-python..."
+      when: ansible_python.version.major == 2
+
+    - name: Install MySQL-python for Python 2
+      pip:
+        name: MySQL-python
+        executable: pip
+      when: ansible_python.version.major == 2
+      become: true

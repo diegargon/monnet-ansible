@@ -1,5 +1,8 @@
 """ Global Vars """
 
+
+AGENT_VERSION = "0.128"
+
 # Track timers
 timers = {}
 
@@ -19,3 +22,10 @@ LT_EVENT_WARN = 6
 
 ALERT_THRESHOLD = 90
 WARN_THRESHOLD = 80
+
+# Timer Stats interval
+
+TIMER_STATS_INTERVAL = 300
+
+# Events
+EVENT_EXPIRATION = 86400

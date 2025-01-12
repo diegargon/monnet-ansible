@@ -3,18 +3,18 @@ from typing import List, Dict, Any
 # Local
 import globals
 from log_linux import log, logpo
+from constants import LogLevel
+from constants import EventType
 
 class EventProcessor:
-    def __init__(self, cpu_threshold: float = 90.0, event_expiration: int = 43200):
+    def __init__(self, ):
         """
         Inicializa el procesador de eventos.
-        :param cpu_threshold: Umbral para el uso de CPU.
-        :param event_expiration: Tiempo en segundos después del cual un evento puede reenviarse.
         """
          # Dict  processed events with time stamp
         self.processed_events: Dict[str, float] = {} 
-        self.cpu_threshold = cpu_threshold
-        self.event_expiration = event_expiration
+        
+        self.event_expiration = globals.EVENT_EXPIRATION
 
     def process_changes(self, datastore) -> List[Dict[str, Any]]:
         """
@@ -28,16 +28,18 @@ class EventProcessor:
         if iowait  > globals.WARN_THRESHOLD:
             event_id = "high_io_delay"
             if iowait > globals.ALERT_THRESHOLD :
-                event_type = globals.LT_EVENT_ALERT
+                log_level = LogLevel.ALERT# globals.LT_EVENT_ALERT
             else:
-                event_type = globals.LT_EVENT_WARN
-
+                log_level = LogLevel.WARNING
+            event_type = EventType.HIGH_IOWAIT
+            
             if self._should_send_event(event_id, current_time) :
                 events.append({
                     "name": "high_iowait",
                     "data": {
                         "iowait": iowait,
                         "event_value": iowait,
+                        "log_level": log_level,
                         "event_type": event_type
                         }
                 })
@@ -50,16 +52,20 @@ class EventProcessor:
             loadavg_data = load_avg["loadavg"]
             if loadavg_data.get("usage") is not None and loadavg_data.get("usage") > globals.WARN_THRESHOLD :
                 if loadavg_data.get("usage") > globals.ALERT_THRESHOLD :
-                    event_type = globals.LT_EVENT_ALERT
+                    log_level = LogLevel.ALERT
                 else:
-                    event_type = globals.LT_EVENT_WARN                
+                    log_level = LogLevel.WARNING     
+           
+                event_type = EventType.HIGH_CPU_USAGE                    
                 event_id = "high_cpu_usage"
+                
                 if self._should_send_event(event_id, current_time):
                     events.append({
                         "name": "high_cpu_usage",
                         "data": {
                             "cpu_usage": loadavg_data["usage"],
                             "event_value": loadavg_data.get("usage"),
+                            "log_level": log_level,
                             "event_type": event_type}
                     })
                     self._mark_event(event_id, current_time)
@@ -72,15 +78,19 @@ class EventProcessor:
             if meminfo_data["percent"] > globals.WARN_THRESHOLD :
                 event_id = "high_memory_usage"
                 if meminfo_data["percent"] > globals.ALERT_THRESHOLD :
-                    event_type = globals.LT_EVENT_ALERT
+                    log_level = LogLevel.ALERT
                 else:
-                    event_type = globals.LT_EVENT_WARN                    
+                    log_level = LogLevel.WARNING
+                    
+                event_type = EventType.HIGH_MEMORY_USAGE                                       
+                    
                 if self._should_send_event(event_id, current_time) :
                     events.append({
                         "name": "high_memory_usage",
                         "data": {
                             "memory_usage": meminfo_data,
                             "event_value": meminfo_data["percent"],
+                            "log_level": log_level,
                             "event_type": event_type
                             }
                     })
@@ -93,16 +103,20 @@ class EventProcessor:
                 if isinstance(stats, dict): 
                     if stats.get("percent")  and stats["percent"] > globals.WARN_THRESHOLD :
                         if stats["percent"] > globals.ALERT_THRESHOLD :
-                            event_type = globals.LT_EVENT_ALERT
+                            log_level = LogLevel.ALERT
                         else:
-                            event_type = globals.LT_EVENT_WARN                                 
+                            log_level = LogLevel.WARNING
+
+                        event_type = EventType.HIGH_DISK_USAGE                                                        
                         event_id = f"high_disk_usage_{stats.get('device', 'unknown')}"
+
                         if self._should_send_event(event_id, current_time):
                             events.append({
                                 "name": "high_disk_usage",
                                 "data": { 
                                     "disks_stats": stats,
                                     "event_value": stats["percent"],
+                                    "log_level": log_level,
                                     "event_type": event_type
                                     }
                             })

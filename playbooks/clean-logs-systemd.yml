@@ -1,0 +1,74 @@
+- name: Manage journald and log cleanup
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Ensure log_retention_days is provided
+      fail:
+        msg: "The variable 'log_retention_days' must be provided via --extra-vars."
+      when: log_retention_days is not defined
+
+    - name: Debug provided log_retention_days
+      debug:
+        msg: "Log retention days set to: {{ log_retention_days }}"
+
+    - name: Check if journald is in use
+      shell: |
+        systemctl is-active systemd-journald
+      register: journald_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: Debug journald check
+      debug:
+        msg: >-
+          Journald status check result:
+          {{ journald_status.stdout.strip() if journald_status.stdout else 'No output' }}
+          (Failed: {{ journald_status.failed }})
+
+    - name: Run journalctl vacuum if journald is active
+      when: journald_status.stdout.strip() == 'active'
+      ansible.builtin.command:
+        cmd: "journalctl --vacuum-time={{ log_retention_days }}d"
+      register: vacuum_result
+
+    - name: Debug vacuum result
+      debug:
+        msg: >-
+          Vacuum command result:
+          stdout: {{ vacuum_result.stdout if vacuum_result.stdout else 'No output' }}
+          stderr: {{ vacuum_result.stderr if vacuum_result.stderr else 'No errors' }}
+          (Failed: {{ vacuum_result.failed }})
+
+    - name: Clean old log files in /var/log
+      find:
+        paths: "/var/log"
+        age: "{{ log_retention_days }}d"
+        recurse: yes
+        file_type: file
+      register: old_logs
+
+    - name: Debug log find result
+      debug:
+        msg: >-
+          Found {{ old_logs.matched|default(0) }} old log files for removal.
+
+    - name: Remove old log files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ old_logs.files }}"
+      register: removal_result
+
+    - name: Debug log removal result
+      debug:
+        msg: >-
+          Log removal results:
+          {{ removal_result.results | map(attribute='path') | list }}
+
+    - name: Notify log cleanup completion
+      debug:
+        msg: >-
+          Journald vacuumed logs older than {{ log_retention_days }} days,
+          and {{ old_logs.matched|default(0) }} old log files removed from /var/log.
