@@ -1,3 +1,7 @@
+"""
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
+"""
+
 class EventType:
     HIGH_IOWAIT = 1
     HIGH_MEMORY_USAGE = 2
@@ -14,4 +18,4 @@ class EventType:
     HOST_INFO_CHANGE = 13
     HOST_BECOME_ON = 14
     HOST_BECOME_OFF = 15
-    NEW_HOST_DISCOVERY = 16;   
+    NEW_HOST_DISCOVERY = 16;
