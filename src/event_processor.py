@@ -57,7 +57,11 @@ class EventProcessor:
         # logpo("Load avg", load_avg, "debug")
         if load_avg and "loadavg" in load_avg :
             loadavg_data = load_avg["loadavg"]
-            if loadavg_data.get("usage") is not None and loadavg_data.get("usage") > globals.WARN_THRESHOLD :
+            if (
+                loadavg_data.get("usage") is not None
+                and loadavg_data.get("usage") > globals.WARN_THRESHOLD
+            ):
+
                 if loadavg_data.get("usage") > globals.ALERT_THRESHOLD :
                     log_level = LogLevel.ALERT
                 else:

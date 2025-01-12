@@ -2,14 +2,11 @@
 @copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
 """
 
+# Standard
 import os
 import socket
 import subprocess
 import re
-import subprocess
-import re
-import json
-
 #from collections import defaultdict
 
 # LOCAL
@@ -231,20 +228,44 @@ def get_listen_ports_info():
                         # Add IPv4 entry
                         entry_ipv4 = ('0.0.0.0', port, service, protocol, 'ipv4')
                         if entry_ipv4 not in seen_ports:
-                            ports_flattened.append({'interface': '0.0.0.0', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv4'})
+                            ports_flattened.append(
+                                {
+                                    'interface': '0.0.0.0',
+                                    'port': port,
+                                    'service': service,
+                                    'protocol': protocol,
+                                    'ip_version': 'ipv4'
+                                }
+                            )
                             seen_ports.add(entry_ipv4)
 
                     elif local_address == '[::]':
                         # Add IPv6 entry
                         entry_ipv6 = ('[::]', port, service, protocol, 'ipv6')
                         if entry_ipv6 not in seen_ports:
-                            ports_flattened.append({'interface': '[::]', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv6'})
+                            ports_flattened.append(
+                                {
+                                    'interface': '[::]',
+                                    'port': port,
+                                    'service': service,
+                                    'protocol': protocol,
+                                    'ip_version': 'ipv6'
+                                }
+                            )
                             seen_ports.add(entry_ipv6)
                     else:
                         # Add regular entry
                         entry = (local_address, port, service, protocol, ip_version)
                         if entry not in seen_ports:
-                            ports_flattened.append({'interface': local_address, 'port': port, 'service': service, 'protocol': protocol, 'ip_version': ip_version})
+                            ports_flattened.append(
+                                {
+                                    'interface': local_address,
+                                    'port': port,
+                                    'service': service,
+                                    'protocol': protocol,
+                                    'ip_version': ip_version
+                                }
+                            )
                             seen_ports.add(entry)
 
     except subprocess.CalledProcessError as e:

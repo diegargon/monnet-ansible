@@ -1,12 +1,14 @@
 """
 @copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
 """
+
+# Standard
 import threading
 
 # Local
 import globals
 import info_linux
-from log_linux import log, logpo
+#from log_linux import log, logpo
 
 
 def check_listen_ports(datastore, notify_callback, startup=None):

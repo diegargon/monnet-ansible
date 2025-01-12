@@ -1,22 +1,26 @@
-#
-# Just initial Near do nothing test
-#
+"""
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
 
+Just initial Near do nothing test
+"""
+# Standard
 import unittest
 from unittest.mock import patch, MagicMock
 import json
 import subprocess
-import socket
+#import socket
 import sys
 import os
 import signal
 import time
 import select
 
+# Local
+from monnet_ansible import run_ansible_playbook
 
 # Modificar sys.path para incluir el directorio src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-from monnet_ansible import run_ansible_playbook
+
 
 class TestMonnetAnsible(unittest.TestCase):
 
@@ -45,12 +49,12 @@ class TestMonnetAnsible(unittest.TestCase):
         """Detener el servidor después de todas las pruebas"""
         if cls.server_process.poll() is None:  # Si el proceso sigue activo
             os.kill(cls.server_process.pid, signal.SIGTERM)
-            cls.server_process.wait()   
+            cls.server_process.wait()
 
     def test_server_is_running(self):
         """Verificar que el servidor sigue ejecutándose después de iniciarlo"""
         self.assertIsNone(
-            self.server_process.poll(), 
+            self.server_process.poll(),
             "El servidor no está corriendo después de iniciarlo"
         )
 
@@ -77,8 +81,8 @@ class TestMonnetAnsible(unittest.TestCase):
                     stderr_line = stream.readline()
                     if stderr_line:
                         stderr_lines.append(stderr_line)
-            
-            time.sleep(0.1) 
+
+            time.sleep(0.1)
 
         self.assertEqual(b"".join(stdout_lines), b"", "El servidor produjo salida inesperada en stdout")
         self.assertEqual(b"".join(stderr_lines), b"", "El servidor produjo errores en stderr")
@@ -92,7 +96,7 @@ class TestMonnetAnsible(unittest.TestCase):
             print("stderr server lines:")
             print(b"".join(stderr_lines).decode())
 
-    @patch('subprocess.Popen')    
+    @patch('subprocess.Popen')
     def test_run_ansible_playbook_success(self, mock_subprocess):
         # Simular un resultado exitoso de Ansible
         mock_process = MagicMock()  # Creamos el mock del proceso
@@ -104,8 +108,8 @@ class TestMonnetAnsible(unittest.TestCase):
 
         # Llamar a la función
         result = run_ansible_playbook("test.yml", {"var1": "value1"}, "127.0.0.1", "ansible")
-        
-        result_dict = json.loads(result) 
+
+        result_dict = json.loads(result)
         print("Resultado completo:", result_dict)
         # Validar el resultado
         self.assertEqual(result_dict['status'], 'success')
@@ -117,7 +121,7 @@ class TestMonnetAnsible(unittest.TestCase):
     def test_run_ansible_playbook_failure(self, mock_subprocess):
         # Simular un error en Ansible
         mock_subprocess.return_value = MagicMock(returncode=1, stdout=b"", stderr=b"Error ejecutando Ansible")
-        
+
         # Validar que se lance una excepción
         with self.assertRaises(Exception):
             run_ansible_playbook("test_playbook.yml", {"var1": "value1"})

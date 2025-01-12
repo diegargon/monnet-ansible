@@ -30,7 +30,7 @@ Response Structure Documentation
 
 {
     'cmd': str,              # Command response type. Example: "pong"
-    'token': str,            # Token used for authentication or identification. Example: "73a7a18ce78742aa8aadacbe6a918dd8"
+    'token': str,            # Token used for authentication or identification.
     'version': float,        # Version of the response or system. Example: 0.22
     'response_msg': bool,    # Indicates if the response message is successful. Example: True
     'refresh': int,          # Refresh interval in seconds. Example: 5
@@ -38,6 +38,7 @@ Response Structure Documentation
 }
 """
 
+# Standard
 import ssl
 import sys
 import time
@@ -45,16 +46,14 @@ import json
 import signal
 import uuid
 import time
-import psutil
 from datetime import datetime
 import http.client
-
+# TrdParty
+import psutil
 # Local
 import globals
-
 from constants import LogLevel
 from constants import EventType
-
 from log_linux import log, logpo
 import info_linux
 import time_utils
@@ -106,7 +105,7 @@ def send_notification(name, data):
     global config
 
     token = config["token"]
-    id = config["id"]
+    idx = config["id"]
     ignore_cert = config["ignore_cert"]
     server_host = config["server_host"]
     server_endpoint = config["server_endpoint"]
@@ -116,7 +115,7 @@ def send_notification(name, data):
     data["name"] = name
 
     payload = {
-        "id": id,
+        "id": idx,
         "cmd": "notification",
         "token": token,
         "version": globals.AGENT_VERSION,

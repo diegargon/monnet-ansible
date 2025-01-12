@@ -5,7 +5,7 @@ Global Vars
 """
 
 
-AGENT_VERSION = "0.130"
+AGENT_VERSION = "0.131"
 
 # Track timers
 timers = {}
