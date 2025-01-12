@@ -4,14 +4,20 @@
 
 import json
 from typing import Optional, Dict, Any
-# Local
-from log_linux import log, logpo
+from log_linux import log
 
 from typing import Optional, Dict, Any
 
 class Datastore:
-    def __init__(self):
-        # Initialization
+    """
+        Keep data and Save/Load from disk in json format
+    """
+    def __init__(self, filename: str = "datastore.json"):
+        """
+        Initialization
+        :param filename: File to save/load data.
+        """
+        self.filename = filename
         self.data: Dict[str, Optional[Dict[str, Any]]] = {
             "last_load_avg": None,
             "last_memory_info": None,

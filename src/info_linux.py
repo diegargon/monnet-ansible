@@ -74,12 +74,18 @@ def get_memory_info():
     }
 
 def get_nodename():
+    """ Get system nodename """
     return os.uname().nodename
 
 def get_hostname():
+    """ Get Hostname """
     return socket.gethostname()
 
 def get_ip_address(hostname):
+    """
+        GET IP Address
+        TODO: get interface/default route address
+    """
     return socket.gethostbyname(hostname)
 
 def get_disks_info():
@@ -167,7 +173,10 @@ def get_iowait(last_cpu_times, current_cpu_times):
     nice_diff = current_cpu_times.nice - last_cpu_times.nice
     system_diff = current_cpu_times.system - last_cpu_times.system
     idle_diff = current_cpu_times.idle - last_cpu_times.idle
-    iowait_diff = (current_cpu_times.iowait - last_cpu_times.iowait) if hasattr(current_cpu_times, 'iowait') else 0
+    iowait_diff = (
+        (current_cpu_times.iowait - last_cpu_times.iowait)
+        if hasattr(current_cpu_times, 'iowait') else 0
+    )
 
     # Suma total de diferencias
     total_diff = user_diff + nice_diff + system_diff + idle_diff + iowait_diff
@@ -193,8 +202,11 @@ def get_listen_ports_info():
         output = subprocess.check_output(['ss', '-tulnp'], text=True).splitlines()
 
         # Regex to parse `ss` output lines
-        ss_regex = re.compile(r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+(?P<local_address>\[.*?\]|[^:\s]+|\*)\:(?P<port>\d+)\s+[^\s]+:\*\s+users:\(\((?P<service>.+?)\)\)')
-
+        ss_regex = re.compile(
+            r'(?P<state>LISTEN|UNCONN)\s+\d+\s+\d+\s+'
+            r'(?P<local_address>\[.*?\]|[^:\s]+|\*)\:(?P<port>\d+)\s+'
+            r'[^\s]+:\*\s+users:\(\((?P<service>.+?)\)\)'
+        )
         for line in output:
             #log(f"Line {line}")
             match = ss_regex.search(line)

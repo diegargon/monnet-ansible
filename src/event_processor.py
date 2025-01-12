@@ -11,6 +11,9 @@ from constants import LogLevel
 from constants import EventType
 
 class EventProcessor:
+    """
+        Event Processor. Process and track the events avoid spamming
+    """
     def __init__(self, ):
         """
         Inicializa el procesador de eventos.

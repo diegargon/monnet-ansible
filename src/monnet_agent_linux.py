@@ -60,7 +60,7 @@ import info_linux
 import time_utils
 from datastore import Datastore
 from event_processor import EventProcessor
-from agent_config import load_config, update_config
+from agent_config import load_config
 import tasks
 
 
@@ -96,12 +96,13 @@ def get_meta():
         "uuid": _uuid                           # ID uniq
     }
 
-
-"""
-    Send notification to server. No response
-
-"""
 def send_notification(name, data):
+    """
+        Send notification to server.
+
+        Return:
+        None
+    """
     global config
 
     token = config["token"]
@@ -159,14 +160,14 @@ def send_request(cmd="ping", data=None):
 
     # Get base config
     token = config["token"]
-    id = config["id"]
+    idx = config["id"]
     interval = config["interval"]
     ignore_cert = config["ignore_cert"]
     server_host = config["server_host"]
     server_endpoint = config["server_endpoint"]
     meta = get_meta()
     payload = {
-        "id": id,
+        "id": idx,
         "cmd": cmd,
         "token": token,
         "interval": interval,
@@ -208,14 +209,24 @@ def send_request(cmd="ping", data=None):
     return None
 
 def validate_response(response, token):
-    """ Basic response validation """
+    """
+    Basic response validation
+
+    Returns:
+    None
+    """
     if response and response.get("cmd") == "pong" and response.get("token") == token:
         return response
     log("Invalid response from server or wrong token.", "warning")
     return None
 
 def handle_signal(signum, frame):
-    """ Signal Handler """
+    """
+    Signal Handler
+
+    Returns:
+    None
+    """
     global running
     global config
 
@@ -262,7 +273,14 @@ def validate_config():
     """
     global config
 
-    required_keys = ["token", "id", "default_interval", "ignore_cert", "server_host", "server_endpoint"]
+    required_keys = [
+        "token",
+        "id",
+        "default_interval",
+        "ignore_cert",
+        "server_host",
+        "server_endpoint"
+    ]
 
     missing_keys = [key for key in required_keys if not config.get(key)]
     if missing_keys:
@@ -277,11 +295,7 @@ def main():
 
     datastore = Datastore()
     event_processor = EventProcessor()
-    # Stats Interval 5m
-    stats_interval = (5 * 60)
 
-    # Send load_avg['5m'] for stats every 5m
-    last_stats_sent = 0
     # Used for iowait
     last_cpu_times = psutil.cpu_times()
 

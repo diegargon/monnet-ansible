@@ -27,7 +27,11 @@ def check_listen_ports(datastore, notify_callback, startup=None):
     #else : #debug
     #    notify_callback("listen_ports_info", current_listen_ports_info)  # Notificar
 
-    globals.timers['check_ports']  = threading.Timer(globals.TIMER_STATS_INTERVAL, check_listen_ports, args=(datastore, notify_callback))
+    globals.timers['check_ports']  = threading.Timer(
+        globals.TIMER_STATS_INTERVAL,
+        check_listen_ports,
+        args=(datastore, notify_callback)
+    )
     globals.timers['check_ports'].start()
 
 
@@ -55,7 +59,9 @@ def send_stats(datastore, notify_callback):
           'iowait_stats': average_iowait
     }
     notify_callback('send_stats', data)
-    globals.timers['send_stats']  = threading.Timer(globals.TIMER_STATS_INTERVAL, send_stats, args=(datastore, notify_callback))
+    globals.timers['send_stats']  = threading.Timer(
+        globals.TIMER_STATS_INTERVAL,
+        send_stats,
+        args=(datastore, notify_callback)
+    )
     globals.timers['send_stats'].start()
-
-
