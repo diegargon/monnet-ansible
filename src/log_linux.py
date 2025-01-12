@@ -1,3 +1,6 @@
+"""
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
+"""
 
 import syslog
 
@@ -42,14 +45,20 @@ def log(message: str, priority: str = "info") -> None:
         "err": syslog.LOG_ERR,
         "warning": syslog.LOG_WARNING,
         "notice": syslog.LOG_NOTICE,
-        "info": syslog.LOG_INFO,        
-        "debug": syslog.LOG_DEBUG,        
+        "info": syslog.LOG_INFO,
+        "debug": syslog.LOG_DEBUG,
     }
 
     if priority not in syslog_level:
-        raise ValueError(f"Invalid priority level: {priority}. Valid options are {list(syslog_level.keys())}")
+        raise ValueError(
+            f"Invalid priority level: {priority}. "
+            f"Valid options are {list(syslog_level.keys())}"
+        )
     if MAX_LOG_LEVEL not in syslog_level:
-        raise ValueError(f"Invalid MIN_LOG_LEVEL: {MAX_LOG_LEVEL}. Valid options are {list(syslog_level.keys())}")
+        raise ValueError(
+            f"Invalid MIN_LOG_LEVEL: {MAX_LOG_LEVEL}. "
+            f"Valid options are {list(syslog_level.keys())}"
+        )
 
     if syslog_level[priority] <= syslog_level[MAX_LOG_LEVEL]:
         syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_USER)

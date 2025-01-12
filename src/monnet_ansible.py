@@ -101,7 +101,12 @@ def handle_client(conn, addr):
                     else:
                         try:
                             # Execute the playbook and retrieve the result
-                            result = run_ansible_playbook(playbook, extra_vars, ip=ip, user=user, limit=limit)
+                            result = run_ansible_playbook(
+                                playbook, extra_vars,
+                                ip=ip,
+                                user=user,
+                                limit=limit
+                            )
 
                             # Convert the result JSON to a dictionary
                             result_data = json.loads(result)  # Expected valid JSON
@@ -114,9 +119,15 @@ def handle_client(conn, addr):
                             }
                             response.update(result_data)
                         except json.JSONDecodeError as e:
-                            response = {"status": "error", "message": "Failed to decode JSON: " + str(e)}
+                            response = {
+                                "status": "error",
+                                "message": "Failed to decode JSON: " + str(e)
+                            }
                         except Exception as e:
-                            response = {"status": "error", "message": "Error executing the playbook: " + str(e)}
+                            response = {
+                                "status": "error",
+                                "message": "Error executing the playbook: " + str(e)
+                            }
 
                 # elif command == "another_command":
                 #     # Handle 'another_command' logic
@@ -195,7 +206,9 @@ def run_ansible_playbook(playbook, extra_vars=None, ip=None, user=None, limit=No
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         if stderr:
-            raise Exception(f"Error ejecutando Ansible: STDOUT: {stdout.decode()} STDERR: {stderr.decode()}")
+            raise Exception(
+                f"Error ejecutando Ansible: STDOUT: {stdout.decode()} STDERR: {stderr.decode()}"
+            )
 
 
         return stdout.decode()
