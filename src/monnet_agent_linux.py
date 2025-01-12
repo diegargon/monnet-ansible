@@ -49,6 +49,10 @@ import http.client
 
 # Local
 import globals
+
+from constants import LogLevel
+from constants import EventType
+
 from log_linux import log, logpo
 import info_linux
 import time_utils
@@ -57,11 +61,12 @@ from event_processor import EventProcessor
 from agent_config import load_config, update_config
 import tasks
 
+
 # Config file
 CONFIG_FILE_PATH = "/etc/monnet/agent-config"
 
 # Global Var
-AGENT_VERSION = "0.112"
+
 running = True
 config = None
 
@@ -85,7 +90,7 @@ def get_meta():
         "hostname": hostname,                   
         "nodename": nodename,                   
         "ip_address": ip_address,               
-        "agent_version": str(AGENT_VERSION),    
+        "agent_version": str(globals.AGENT_VERSION),    
         "uuid": _uuid                           # ID uniq
     }
     
@@ -111,7 +116,7 @@ def send_notification(name, data):
         "id": id,
         "cmd": "notification",
         "token": token,
-        "version": AGENT_VERSION,        
+        "version": globals.AGENT_VERSION,        
         "data":  data or {},
         "meta": meta
     }
@@ -163,7 +168,7 @@ def send_request(cmd="ping", data=None):
         "cmd": cmd,
         "token": token,
         "interval": interval,
-        "version": AGENT_VERSION,
+        "version": globals.AGENT_VERSION,
         "data": data or {},
         "meta": meta
     }
@@ -230,15 +235,17 @@ def handle_signal(signum, frame):
     if info_linux.is_system_shutting_down():
         notification_type = "system_shutdown"         
         msg = "System shutdown or reboot"
-        event_type = globals.LT_EVENT_ALERT        
+        log_level = LogLevel.ALERT
+        event_type = EventType.SYSTEM_SHUTDOWN
     else:
         notification_type = "app_shutdown"
         msg = f"Signal receive: {signal_name}. Closing application."
-        event_type = globals.LT_EVENT_WARN    
+        log_level = LogLevel.ALERT
+        event_type = EventType.APP_SHUTDOWN
         
     log(f"Receive Signal {signal_name}  Stopping app...", "notice")
     
-    data = {"msg": msg, "event_type": event_type}                    
+    data = {"msg": msg, "log_level": log_level, "event_type": event_type}                    
     send_notification(notification_type, data)    
     running = False
     sys.exit(0)
@@ -299,12 +306,15 @@ def main():
     starting_data = {
         'msg': datetime.now().time(),
         'ncpu': info_linux.get_cpus(),
-        'uptime': info_linux.get_uptime()       
+        'uptime': info_linux.get_uptime(),
+        'log_level': LogLevel.NOTICE,
+        'event_type': EventType.STARTING
     }
     send_notification('starting', starting_data)
     
-    # Timer function
-    tasks.check_listen_ports(datastore, send_notification)
+    # Timer functions
+    tasks.check_listen_ports(datastore, send_notification, startup=1)
+    tasks.send_stats(datastore, send_notification)
     
     while running:
         extra_data = {}
@@ -334,18 +344,18 @@ def main():
         current_cpu_times = psutil.cpu_times()
         current_iowait = info_linux.get_iowait(last_cpu_times, current_cpu_times)
         current_iowait = round(current_iowait, 2)
-        if current_iowait != datastore.get_data("last_iowait"):            
+        if current_iowait != datastore.get_data("last_iowait"):
             datastore.update_data("last_iowait", current_iowait)
             extra_data.update({'iowait': current_iowait})            
         last_cpu_times = current_cpu_times
         
-        # Send stats ever stats interval
-        if (current_time - last_stats_sent) > stats_interval:
-            extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
-            extra_data["iowait_stats"] = current_iowait
-            last_stats_sent = current_time
+        # Send load 5min stats 
+        #if (current_time - last_stats_sent) > stats_interval:
+        #    extra_data["loadavg_stats"] = current_load_avg['loadavg']['5min']
+        #    extra_data["iowait_stats"] = current_iowait
+        #   last_stats_sent = current_time
                         
-        log("Sending ping to server. " + str(AGENT_VERSION), "debug")
+        log("Sending ping to server. " + str(globals.AGENT_VERSION), "debug")
         response = send_request(cmd="ping", data=extra_data)
 
         events = event_processor.process_changes(datastore)
