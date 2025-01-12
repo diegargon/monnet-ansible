@@ -1,3 +1,7 @@
+"""
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
+"""
+
 import time
 from typing import List, Dict, Any
 # Local
@@ -12,8 +16,8 @@ class EventProcessor:
         Inicializa el procesador de eventos.
         """
          # Dict  processed events with time stamp
-        self.processed_events: Dict[str, float] = {} 
-        
+        self.processed_events: Dict[str, float] = {}
+
         self.event_expiration = globals.EVENT_EXPIRATION
 
     def process_changes(self, datastore) -> List[Dict[str, Any]]:
@@ -32,7 +36,7 @@ class EventProcessor:
             else:
                 log_level = LogLevel.WARNING
             event_type = EventType.HIGH_IOWAIT
-            
+
             if self._should_send_event(event_id, current_time) :
                 events.append({
                     "name": "high_iowait",
@@ -54,11 +58,11 @@ class EventProcessor:
                 if loadavg_data.get("usage") > globals.ALERT_THRESHOLD :
                     log_level = LogLevel.ALERT
                 else:
-                    log_level = LogLevel.WARNING     
-           
-                event_type = EventType.HIGH_CPU_USAGE                    
+                    log_level = LogLevel.WARNING
+
+                event_type = EventType.HIGH_CPU_USAGE
                 event_id = "high_cpu_usage"
-                
+
                 if self._should_send_event(event_id, current_time):
                     events.append({
                         "name": "high_cpu_usage",
@@ -81,9 +85,9 @@ class EventProcessor:
                     log_level = LogLevel.ALERT
                 else:
                     log_level = LogLevel.WARNING
-                    
-                event_type = EventType.HIGH_MEMORY_USAGE                                       
-                    
+
+                event_type = EventType.HIGH_MEMORY_USAGE
+
                 if self._should_send_event(event_id, current_time) :
                     events.append({
                         "name": "high_memory_usage",
@@ -100,20 +104,20 @@ class EventProcessor:
         disk_info = datastore.get_data("last_disk_info")
         if isinstance(disk_info, dict) and "disksinfo" in disk_info:
             for stats in disk_info["disksinfo"]:
-                if isinstance(stats, dict): 
+                if isinstance(stats, dict):
                     if stats.get("percent")  and stats["percent"] > globals.WARN_THRESHOLD :
                         if stats["percent"] > globals.ALERT_THRESHOLD :
                             log_level = LogLevel.ALERT
                         else:
                             log_level = LogLevel.WARNING
 
-                        event_type = EventType.HIGH_DISK_USAGE                                                        
+                        event_type = EventType.HIGH_DISK_USAGE
                         event_id = f"high_disk_usage_{stats.get('device', 'unknown')}"
 
                         if self._should_send_event(event_id, current_time):
                             events.append({
                                 "name": "high_disk_usage",
-                                "data": { 
+                                "data": {
                                     "disks_stats": stats,
                                     "event_value": stats["percent"],
                                     "log_level": log_level,

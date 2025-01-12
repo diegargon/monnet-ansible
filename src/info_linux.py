@@ -1,3 +1,7 @@
+"""
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
+"""
+
 import os
 import socket
 import subprocess
@@ -26,7 +30,7 @@ def bytes_to_mb(bytes_value):
 def get_load_avg():
     load1, load5, load15 = os.getloadavg()
     current_cpu_usage = cpu_usage(load1)
-    
+
     return {
         "loadavg": {
             "1min": round(load1, 2),
@@ -64,7 +68,7 @@ def get_memory_info():
             "free": bytes_to_mb(free),
             "used": bytes_to_mb(used),
             "cache_used": bytes_to_mb(cache_used),
-            "cache_percent": round((cache_used / total) * 100, 2) if total > 0 else 0,            
+            "cache_percent": round((cache_used / total) * 100, 2) if total > 0 else 0,
             "percent": round((used / total) * 100, 2) if total > 0 else 0
         }
     }
@@ -86,6 +90,12 @@ def get_disks_info():
         dict: Disk partions info Key: disks
     """
     disks_info = []
+
+    real_filesystems = {
+        "ext4", "ext3", "ext2", "xfs", "zfs", "btrfs", "reiserfs",
+        "vfat", "fat32", "ntfs", "hfsplus", "exfat", "iso9660",
+        "udf", "f2fs", "nfs"
+    }
 
     # Read
     with open("/proc/mounts", "r") as mounts:
@@ -130,10 +140,10 @@ def cpu_usage(cpu_load):
     total_cpus = get_cpus()
     if total_cpus == 0:
         return False
-    
+
     cpu_usage_percentage = (cpu_load / total_cpus) * 100
 
-    return round(cpu_usage_percentage, 2)    
+    return round(cpu_usage_percentage, 2)
 
 def read_cpu_stats():
     """ CPU Stats from /proc/stat."""
@@ -149,7 +159,7 @@ def get_iowait(last_cpu_times, current_cpu_times):
     """
     Io wait/delay calculation
     :return: Percent IO Wait within call median
-                     
+
     """
 
     # Calcular diferencias acumulativas
@@ -169,7 +179,7 @@ def get_iowait(last_cpu_times, current_cpu_times):
     if total_diff > 0:
         return (iowait_diff / total_diff) * 100
 
-    return 0 
+    return 0
 
 def get_listen_ports_info():
     """
@@ -211,7 +221,7 @@ def get_listen_ports_info():
                         if entry_ipv4 not in seen_ports:
                             ports_flattened.append({'interface': '0.0.0.0', 'port': port, 'service': service, 'protocol': protocol, 'ip_version': 'ipv4'})
                             seen_ports.add(entry_ipv4)
-                            
+
                     elif local_address == '[::]':
                         # Add IPv6 entry
                         entry_ipv6 = ('[::]', port, service, protocol, 'ipv6')

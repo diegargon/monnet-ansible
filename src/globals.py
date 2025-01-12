@@ -1,4 +1,8 @@
-""" Global Vars """
+"""
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
+
+Global Vars
+"""
 
 
 AGENT_VERSION = "0.128"
