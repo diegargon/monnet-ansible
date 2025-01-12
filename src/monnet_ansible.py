@@ -1,7 +1,9 @@
 """
+@copyright Copyright CC BY-NC-ND 4.0 @ 2020 - 2024 Diego Garcia (diego/@/envigo.net)
+
 Monnet Ansible Gateway
 
-This code is just a basic/preliminary draft. 
+This code is just a basic/preliminary draft.
 
 Originally to do task only ansible relate but will be a move to a more generic monnet-gateway service
 
@@ -45,8 +47,8 @@ from log_linux import log, logpo
 
 VERSION = "0.2"
 MINOR_VERSION = 5
-HOST = 'localhost' 
-PORT = 65432 
+HOST = 'localhost'
+PORT = 65432
 
 ALLOWED_COMMANDS = ["playbook"]
 
@@ -115,7 +117,7 @@ def handle_client(conn, addr):
                             response = {"status": "error", "message": "Failed to decode JSON: " + str(e)}
                         except Exception as e:
                             response = {"status": "error", "message": "Error executing the playbook: " + str(e)}
-                
+
                 # elif command == "another_command":
                 #     # Handle 'another_command' logic
                 #     pass
@@ -123,7 +125,7 @@ def handle_client(conn, addr):
                 logpo("Response: ", response)
                 # Send the response back to the client in JSON format
                 conn.sendall(json.dumps(response).encode())
-            
+
             except Exception as e:
                 tb = traceback.extract_tb(e.__traceback__)
                 relevant_trace = [frame for frame in tb if "monnet_ansible.py" in frame.filename]
@@ -149,14 +151,14 @@ def handle_client(conn, addr):
 
 Server
 
-"""        
+"""
 def run_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.bind((HOST, PORT))
             s.listen()
             log(f"v{VERSION}.{MINOR_VERSION}: Esperando conexión en {HOST}:{PORT}...", "info")
-            
+
             while True:
                 conn, addr = s.accept()
                 threading.Thread(target=handle_client, args=(conn, addr)).start()
@@ -173,15 +175,15 @@ def run_ansible_playbook(playbook, extra_vars=None, ip=None, user=None, limit=No
         extra_vars_str = json.dumps(extra_vars)
 
     playbook_path = os.path.join('playbooks', playbook)
-    
+
     command = ['ansible-playbook', playbook_path]
 
     if extra_vars_str:
-        command.extend(['--extra-vars', extra_vars_str])    
+        command.extend(['--extra-vars', extra_vars_str])
 
     if ip:
         command.insert(1, '-i')
-        command.insert(2, f"{ip},") 
+        command.insert(2, f"{ip},")
 
     if limit:
         command.extend(['--limit', limit])
@@ -189,13 +191,13 @@ def run_ansible_playbook(playbook, extra_vars=None, ip=None, user=None, limit=No
     if user:
         command.extend(['-u', user])
 
-    try:         
+    try:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()    
+        stdout, stderr = process.communicate()
         if stderr:
             raise Exception(f"Error ejecutando Ansible: STDOUT: {stdout.decode()} STDERR: {stderr.decode()}")
 
-    
+
         return stdout.decode()
 
     except Exception as e:
