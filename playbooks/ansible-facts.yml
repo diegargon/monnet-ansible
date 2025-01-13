@@ -1,4 +1,154 @@
 - name: Display gathered facts
   hosts: all
   gather_facts: true
-  
+
+  tasks:
+    - name: Display hostname and domain
+      debug:
+        msg:
+          - "Hostname: {{ ansible_hostname | default('None')}}"
+          - "FQDN: {{ ansible_fqdn | default('None')}}"
+          - "Domain: {{ ansible_domain | default('None')}}"
+
+    - name: Display OS details
+      debug:
+        msg:
+          - "OS: {{ ansible_distribution | default('None')}} {{ ansible_distribution_version | default('None')}}"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Architecture: {{ ansible_architecture }}"
+
+    - name: Display network details
+      debug:
+        msg:
+          - "Default IPv4 Address: {{ ansible_default_ipv4.address | default('None')}}"
+          - "Default IPv4 Gateway: {{ ansible_default_ipv4.gateway | default('None')}}"
+          - "Interface: {{ ansible_default_ipv4.interface | default('None') }}"
+
+    - name: Display memory and CPU info
+      debug:
+        msg:
+          - "Total Memory: {{ ansible_memtotal_mb | default('None') }} MB"
+          - "Total Swap: {{ ansible_swaptotal_mb | default('None') }} MB"
+          - "CPU(s): {{ ansible_processor_vcpus | default('None') }}"
+          - "Processor(s): {{ ansible_processor | default('None') }}"
+
+    - name: Display disk information
+      debug:
+        msg:
+          - "Mounts:"
+          - "{{ ansible_mounts | map(attribute='mount') | join(', ') }}"
+
+    - name: Display available network interfaces
+      debug:
+        msg:
+          - "Available Interfaces: {{ ansible_interfaces | join(', ') }}"
+
+    - name: Display all environment variables
+      debug:
+        msg: >
+          Environment Variables:
+          {% for key, value in ansible_env.items() %}
+          {{ key }}: {{ value }}
+          {% endfor %}
+
+    - name: Display Ansible version
+      debug:
+        msg: "Ansible Version: {{ ansible_version.full | default('None') }}"
+
+    - name: Display CPU details
+      debug:
+        msg:
+          - "CPU Model: {{ ansible_processor[1] if ansible_processor|length > 1 else 'Unknown' }}"
+          - "Number of CPUs: {{ ansible_processor_vcpus | default('None') }}"
+          - "Processor Threads: {{ ansible_processor_threads_per_core | default('N/A') }}"
+
+    - name: Display BIOS information
+      debug:
+        msg:
+          - "Manufacturer: {{ ansible_system_vendor | default('None') }}"
+          - "Product Name: {{ ansible_product_name | default('None') }}"
+          - "Serial Number: {{ ansible_product_serial | default('None') }}"
+          - "BIOS Version: {{ ansible_bios_version | default('None') }}"
+
+    - name: Display timezone and date
+      debug:
+        msg:
+          - "Timezone: {{ ansible_date_time.tz | default('None') }}"
+          - "Date: {{ ansible_date_time.date | default('None') }}"
+          - "Time: {{ ansible_date_time.time | default('None') }}"
+
+    - name: Display package manager and version
+      debug:
+        msg: >
+          Package Manager: {{
+            ansible_pkg_mgr if ansible_pkg_mgr is defined else 'Unknown'
+          }}
+          Version: {{
+            ansible_distribution_version if ansible_distribution_version is defined else 'Unknown'
+          }}
+
+    - name: Display kernel parameters
+      debug:
+        msg:
+          - "OS Kernel: {{ ansible_kernel | default('None') }}"
+          - "Kernel Release: {{ ansible_os_family | default('None') }}"
+
+    - name: Display userspace architecture details
+      debug:
+        msg:
+          - "Userspace Architecture: {{ ansible_userspace_architecture | default('None') }}"
+          - "Userspace Bits: {{ ansible_userspace_bits | default('None') }}"
+
+    - name: Display virtualization role and type
+      debug:
+        msg:
+          - "Virtualization Role: {{ ansible_virtualization_role | default('None') }}"
+          - "Virtualization Type: {{ ansible_virtualization_type | default('None') }}"
+
+    - name: Display guest virtualization technologies
+      debug:
+        msg: >
+          Virtualization Technologies (Guest): {{
+            ansible_virtualization_tech_guest | join(', ') if ansible_virtualization_tech_guest is defined else 'None'
+          }}
+
+    - name: Display host virtualization technologies
+      debug:
+        msg: >
+          Virtualization Technologies (Host): {{
+            ansible_virtualization_tech_host | join(', ') if ansible_virtualization_tech_host is defined else 'None'
+          }}
+    - name: Display load averages
+      debug:
+        msg:
+          - "Load Average (1m): {{ ansible_loadavg['1m'] | default('None') }}"
+          - "Load Average (5m): {{ ansible_loadavg['5m'] | default('None') }}"
+          - "Load Average (15m): {{ ansible_loadavg['15m'] | default('None') }}"
+
+    - name: Display locally reachable IPv4 addresses
+      debug:
+        msg: >
+          Locally Reachable IPv4 Addresses: {{
+            ansible_locally_reachable_ips['ipv4'] | join(', ') if ansible_locally_reachable_ips['ipv4'] is defined else 'None'
+          }}
+
+    - name: Display memory details (nocache)
+      debug:
+        msg:
+          - "Nocache Memory Free: {{ ansible_memory_mb['nocache']['free'] | default('None') }} MB"
+          - "Nocache Memory Used: {{ ansible_memory_mb['nocache']['used'] | default('None') }} MB"
+
+    - name: Display real memory details
+      debug:
+        msg:
+          - "Real Memory Free: {{ ansible_memory_mb['real']['free'] | default('None') }} MB"
+          - "Real Memory Total: {{ ansible_memory_mb['real']['total'] | default('None') }} MB"
+          - "Real Memory Used: {{ ansible_memory_mb['real']['used'] | default('None') }} MB"
+
+    - name: Display swap memory details
+      debug:
+        msg:
+          - "Swap Memory Cached: {{ ansible_memory_mb['swap']['cached'] | default('None') }} MB"
+          - "Swap Memory Free: {{ ansible_memory_mb['swap']['free'] | default('None') }} MB"
+          - "Swap Memory Total: {{ ansible_memory_mb['swap']['total'] | default('None') }} MB"
+          - "Swap Memory Used: {{ ansible_memory_mb['swap']['used'] | default('None') }} MB"

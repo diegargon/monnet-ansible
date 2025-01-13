@@ -6,9 +6,9 @@
 
   vars:
     #db_service: "{{ database_service }}"
-    #db_name: "{{ database_name }}"  
+    #db_name: "{{ database_name }}"
     mysql_username: "{{ db_username }}"
-    mysql_password: "{{ db_password }}"  
+    mysql_password: "{{ db_password }}"
 
   tasks:
     - name: Ensure MySQL is running
@@ -106,4 +106,4 @@
 
     - name: Display MySQL connection statistics
       debug:
-        msg: "Threads connected: {{ connection_status.query_result[0][1] if connection_status.query_result | length > 0 else 'No data found' }}"
+        msg: "Threads connected: {{ connection_status.query_result[0][0] if connection_status.query_result | length > 0 else 'No data found' }}"
